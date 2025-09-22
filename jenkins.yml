@@ -1,6 +1,5 @@
----
 - name: Install and configure Jenkins
-  hosts: jenkins_servers
+  hosts: JenkinsMaster, JenkinsAgent
   become: yes
   roles:
     - jenkins
