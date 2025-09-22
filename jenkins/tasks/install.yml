@@ -1,5 +1,5 @@
 - name: Ensure wget is installed
-  package:
+  ansible.builtin.package:
     name: wget
     state: present
 
@@ -30,11 +30,11 @@
     state: present
   when: ansible_distribution == "Ubuntu"
 
-- name: Ensure Jenkins service is started and enabled on Ubuntu
+- name: Ensure Jenkins service is enabled and started on Ubuntu
   ansible.builtin.service:
     name: jenkins
-    state: started
     enabled: yes
+    state: started
   when: ansible_distribution == "Ubuntu"
 
 # ---------------- Amazon Linux / RHEL Tasks ----------------
@@ -62,11 +62,11 @@
     state: present
   when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
-- name: Ensure Jenkins service is started and enabled on Amazon Linux / RHEL
+- name: Ensure Jenkins service is enabled and started on Amazon Linux / RHEL
   ansible.builtin.service:
     name: jenkins
-    state: started
     enabled: yes
+    state: started
   when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
 # ---------------- Optional: Check if Jenkins is running ----------------
