@@ -1,8 +1,10 @@
 plugin: amazon.aws.aws_ec2
 regions:
-  - us-east-1               # Change to your AWS region
+  - us-east-1                   # Your AWS region
 filters:
-  instance-state-name: running
-  "instance-id": "not:i-014872d8e09e56e20"   # Exclude Ansible control node
+  instance-state-name: running  # Only running instances
+  "instance-id": "not:i-014872d8e09e56e20"  # Exclude control node
 hostnames:
-  - private-ip-address       # Use private IPs as hostnames
+  - private-ip-address          # Use private IPs for SSH
+compose:
+  ansible_host: private-ip-address
