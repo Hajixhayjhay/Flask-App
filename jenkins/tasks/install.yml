@@ -1,14 +1,5 @@
 ---
-- name: Install Jenkins on Ubuntu
-  apt:
-    name:
-      - openjdk-11-jdk
-      - jenkins
-    state: present
-    update_cache: yes
-  become: yes
-  when: ansible_distribution == "Ubuntu"
-
+# Ubuntu
 - name: Add Jenkins repository and key on Ubuntu
   apt_key:
     url: https://pkg.jenkins.io/debian-stable/jenkins.io.key
@@ -23,16 +14,18 @@
   become: yes
   when: ansible_distribution == "Ubuntu"
 
-- name: Install Jenkins on Amazon Linux / RHEL
-  yum:
+- name: Install Jenkins and OpenJDK on Ubuntu
+  apt:
     name:
-      - java-11-amazon-corretto-devel
+      - openjdk-11-jdk
       - jenkins
     state: present
+    update_cache: yes
   become: yes
-  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+  when: ansible_distribution == "Ubuntu"
 
-- name: Add Jenkins repository on Amazon Linux
+# Amazon Linux / RHEL
+- name: Add Jenkins repository on Amazon Linux / RHEL
   yum_repository:
     name: jenkins
     description: Jenkins repo
@@ -43,6 +36,16 @@
   become: yes
   when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
+- name: Install Jenkins and Java on Amazon Linux / RHEL
+  yum:
+    name:
+      - java-11-amazon-corretto-devel
+      - jenkins
+    state: present
+  become: yes
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+
+# Start Jenkins service
 - name: Start Jenkins service
   service:
     name: jenkins
