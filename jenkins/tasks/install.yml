@@ -1,9 +1,4 @@
 ---
-- name: Install and Configure Jenkins
-  hosts: jenkins_servers
-  become: yes
-  tasks:
-
     # Ubuntu tasks
     - name: Add Jenkins GPG keyring on Ubuntu
       ansible.builtin.shell: |
