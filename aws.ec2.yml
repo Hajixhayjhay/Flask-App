@@ -1,3 +1,4 @@
+---
 plugin: amazon.aws.aws_ec2
 regions:
   - us-east-1                   # Your AWS region
@@ -8,3 +9,6 @@ hostnames:
   - private-ip-address          # Use private IPs for SSH
 compose:
   ansible_host: private-ip-address
+strict: false
+
+...
