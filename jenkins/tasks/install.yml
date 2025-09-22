@@ -1,15 +1,16 @@
 ---
 # Ubuntu
-- name: Add Jenkins repository and key on Ubuntu
-  apt_key:
-    url: https://pkg.jenkins.io/debian-stable/jenkins.io.key
-    state: present
+- name: Download Jenkins GPG key
+  get_url:
+    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+    dest: /usr/share/keyrings/jenkins-keyring.asc
+    mode: '0644'
   become: yes
   when: ansible_distribution == "Ubuntu"
 
 - name: Add Jenkins repository on Ubuntu
   apt_repository:
-    repo: deb https://pkg.jenkins.io/debian-stable binary/
+    repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
     state: present
   become: yes
   when: ansible_distribution == "Ubuntu"
@@ -25,7 +26,14 @@
   when: ansible_distribution == "Ubuntu"
 
 # Amazon Linux / RHEL
-- name: Add Jenkins repository on Amazon Linux / RHEL
+- name: Import Jenkins GPG key on Amazon Linux
+  rpm_key:
+    state: present
+    key: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+  become: yes
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+
+- name: Add Jenkins repo on Amazon Linux / RHEL
   yum_repository:
     name: jenkins
     description: Jenkins repo
