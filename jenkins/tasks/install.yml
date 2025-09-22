@@ -31,10 +31,10 @@
   when: ansible_distribution == "Ubuntu"
 
 - name: Ensure Jenkins service is enabled and started on Ubuntu
-  ansible.builtin.service:
-    name: jenkins
-    enabled: yes
-    state: started
+  ansible.builtin.systemd:
+     enabled: yes
+     name: jenkins
+     state: started
   when: ansible_distribution == "Ubuntu"
 
 # ---------------- Amazon Linux / RHEL Tasks ----------------
@@ -63,9 +63,9 @@
   when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
 - name: Ensure Jenkins service is enabled and started on Amazon Linux / RHEL
-  ansible.builtin.service:
-    name: jenkins
+  ansible.builtin.systemd:
     enabled: yes
+    name: jenkins
     state: started
   when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
