@@ -1,61 +1,67 @@
 ---
-# Jenkins installation tasks
-
-# ---------- Ubuntu ----------
-- name: Add Jenkins GPG keyring on Ubuntu
-  ansible.builtin.command: >
-    curl -fsSL https://pkg.jenkins.io/debian/jenkins.io-2023.key
-    | tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+- name: Install and Configure Jenkins
+  hosts: jenkins_servers
   become: yes
-  when: ansible_distribution == "Ubuntu"
+  tasks:
 
-- name: Add Jenkins repo on Ubuntu
-  ansible.builtin.command: >
-    echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian binary/
-    | tee /etc/apt/sources.list.d/jenkins.list > /dev/null
-  become: yes
-  when: ansible_distribution == "Ubuntu"
+    # Ubuntu tasks
+    - name: Add Jenkins GPG keyring on Ubuntu
+      ansible.builtin.shell: |
+        curl -fsSL https://pkg.jenkins.io/debian/jenkins.io-2023.key \
+        | tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+      args:
+        executable: /bin/bash
+      when: ansible_distribution == "Ubuntu"
 
-- name: Update apt cache on Ubuntu
-  ansible.builtin.apt:
-    update_cache: yes
-  become: yes
-  when: ansible_distribution == "Ubuntu"
+    - name: Add Jenkins repository on Ubuntu
+      ansible.builtin.shell: |
+        echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian binary/ \
+        | tee /etc/apt/sources.list.d/jenkins.list > /dev/null
+      args:
+        executable: /bin/bash
+      when: ansible_distribution == "Ubuntu"
 
-- name: Install Jenkins and OpenJDK on Ubuntu
-  ansible.builtin.apt:
-    name:
-      - openjdk-11-jdk
-      - jenkins
-    state: present
-  become: yes
-  when: ansible_distribution == "Ubuntu"
+    - name: Update apt cache on Ubuntu
+      ansible.builtin.apt:
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
 
-# ---------- Amazon Linux / RHEL ----------
-- name: Add Jenkins repo on Amazon Linux / RHEL
-  yum_repository:
-    name: jenkins
-    description: Jenkins repo
-    baseurl: https://pkg.jenkins.io/redhat-stable/
-    gpgcheck: yes
-    gpgkey: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
-    state: present
-  become: yes
-  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+    - name: Install Jenkins and OpenJDK on Ubuntu
+      ansible.builtin.apt:
+        name:
+          - openjdk-11-jdk
+          - jenkins
+        state: present
+      when: ansible_distribution == "Ubuntu"
 
-- name: Install Jenkins and Java on Amazon Linux / RHEL
-  yum:
-    name:
-      - java-11-amazon-corretto-devel
-      - jenkins
-    state: present
-  become: yes
-  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+    # Amazon Linux / RHEL tasks
+    - name: Import Jenkins GPG key on Amazon Linux / RHEL
+      ansible.builtin.rpm_key:
+        state: present
+        key: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
-# ---------- Start Jenkins service ----------
-- name: Start and enable Jenkins service
-  ansible.builtin.service:
-    name: jenkins
-    state: started
-    enabled: yes
-  become: yes
+    - name: Add Jenkins repository on Amazon Linux / RHEL
+      yum_repository:
+        name: jenkins
+        description: Jenkins repo
+        baseurl: https://pkg.jenkins.io/redhat-stable/
+        gpgcheck: yes
+        gpgkey: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+        state: present
+      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+
+    - name: Install Jenkins and Java on Amazon Linux / RHEL
+      yum:
+        name:
+          - java-11-amazon-corretto-devel
+          - jenkins
+        state: present
+      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+
+    # Start and enable Jenkins service (works for all)
+    - name: Start and enable Jenkins service
+      ansible.builtin.service:
+        name: jenkins
+        state: started
+        enabled: yes
