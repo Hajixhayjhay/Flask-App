@@ -1,10 +1,12 @@
+---
 plugin: amazon.aws.aws_ec2
 regions:
   - us-east-1
 filters:
   instance-state-name: running
 compose:
-  ansible_host: public_ip_address   # use public IP for SSH
+  ansible_host: private_ip_address   # use private IP since control host is inside the VPC
 keyed_groups:
   - key: tags.Role
     prefix: tag_Role_
+strict: False
