@@ -11,14 +11,14 @@
         dest: /usr/share/keyrings/jenkins-keyring.asc
         mode: '0644'
       when: ansible_distribution == "Ubuntu"
-      notify: Restart Jenkins
+      
 
     - name: Add Jenkins repository (Ubuntu)
       ansible.builtin.apt_repository:
         repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian binary/"
         state: present
       when: ansible_distribution == "Ubuntu"
-      notify: Restart Jenkins
+    
 
     - name: Install Java and Jenkins (Ubuntu)
       apt:
@@ -28,7 +28,7 @@
         - openjdk-17-jdk
         - jenkins
       when: ansible_distribution == "Ubuntu"
-      notify: Restart Jenkins
+      
 
     # ---------------- Amazon Linux / RHEL Tasks ----------------
     - name: Update yum cache (Amazon/RHEL)
@@ -42,14 +42,14 @@
         name: java-17-openjdk
         state: present
       when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
-      notify: Restart Jenkins
+     
 
     - name: Import Jenkins GPG key (Amazon/RHEL)
       ansible.builtin.rpm_key:
         state: present
         key: https://pkg.jenkins.io/redhat/jenkins.io-2023.key
       when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
-      notify: Restart Jenkins
+    
 
     - name: Add Jenkins repository (Amazon/RHEL)
       ansible.builtin.get_url:
@@ -57,14 +57,14 @@
         dest: /etc/yum.repos.d/jenkins.repo
         mode: '0644'
       when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
-      notify: Restart Jenkins
+     
 
     - name: Install Jenkins (Amazon/RHEL)
       yum:
         name: jenkins
         state: present
       when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
-      notify: Restart Jenkins
+      
 
     # ---------------- Common Tasks ----------------
     - name: Ensure Jenkins service is enabled and started
@@ -79,5 +79,7 @@
         port: "{{ jenkins_port }}"
         host: "{{ ansible_host | default('127.0.0.1') }}"
         timeout: 120
+        
+
 
  
