@@ -1,0 +1,8 @@
+- name: Setup SonarQube
+  hosts: tag_Role_SonarQube
+  become: yes
+  roles:
+    - sonarqube
+  vars:
+    sonar_port: 9000
+    

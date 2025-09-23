@@ -17,16 +17,31 @@
     mode: '0644'
 
 - name: Initialize SQLite database
-  ansible.builtin.shell: sqlite3 "{{ app_dir }}/data.db" < "{{ app_dir }}/init_db.sql"
+  ansible.builtin.shell: sqlite3 "/opt/flask-app/data.db" < "/opt/flask-app/init_db.sql"
   args:
-    creates: "{{ app_dir }}/data.db"
-
+    creates: "/opt/flask-app/data.db"
 
 - name: Copy templates
   ansible.builtin.copy:
     src: templates/
-    dest: "{{ app_dir }}/templates/"
+    dest: /opt/flask-app/templates/
     mode: '0755'
+
+- name: Copy requirements.txt
+  copy:
+    src: requirements.txt
+    dest: /opt/flask-app/requirements.txt
+    mode: '0644'
+
+- name: Create Python virtual environment
+  ansible.builtin.command: python3 -m venv /opt/flask-app/venv
+  args:
+    creates: /opt/flask-app/venv/bin/activate
+
+- name: Install Python dependencies
+  ansible.builtin.command: /opt/flask-app/venv/bin/pip install --upgrade pip
+- name: Install required packages
+  ansible.builtin.command: /opt/flask-app/venv/bin/pip install -r /opt/flask-app/requirements.txt
 
 - name: Create systemd service for Flask app
   copy:
@@ -39,7 +54,7 @@
       [Service]
       User=ec2-user
       WorkingDirectory=/opt/flask-app
-      ExecStart=/usr/bin/python3 app.py
+      ExecStart=/opt/flask-app/venv/bin/python app.py
       Restart=always
 
       [Install]

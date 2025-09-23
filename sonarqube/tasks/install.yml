@@ -1,0 +1,86 @@
+---
+# Install Java (generic Linux)
+- name: Ensure Java 17 is installed
+  package:
+    name: openjdk-17-jdk
+    state: present
+  become: yes
+
+# Create sonar group
+- name: Create sonar group
+  group:
+    name: "{{ sonar_group }}"
+    state: present
+  become: yes
+
+# Create sonar user
+- name: Create sonar user
+  user:
+    name: "{{ sonar_user }}"
+    group: "{{ sonar_group }}"
+    create_home: no
+    shell: /bin/false
+  become: yes
+
+# Download SonarQube
+- name: Download SonarQube
+  get_url:
+    url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-{{ sonar_version }}.zip"
+    dest: /tmp/sonarqube.zip
+  become: yes
+
+# Unzip SonarQube
+- name: Unzip SonarQube
+  unarchive:
+    src: /tmp/sonarqube.zip
+    dest: "{{ sonar_install_dir }}"
+    remote_src: yes
+    creates: "{{ sonar_install_dir }}/sonarqube-{{ sonar_version }}"
+  become: yes
+
+# Set ownership
+- name: Change ownership to sonar user
+  file:
+    path: "{{ sonar_install_dir }}/sonarqube-{{ sonar_version }}"
+    owner: "{{ sonar_user }}"
+    group: "{{ sonar_group }}"
+    state: directory
+    recurse: yes
+  become: yes
+
+# Create systemd service
+- name: Create systemd service for SonarQube
+  copy:
+    dest: /etc/systemd/system/sonarqube.service
+    content: |
+      [Unit]
+      Description=SonarQube service
+      After=syslog.target network.target
+
+      [Service]
+      Type=forking
+      ExecStart={{ sonar_install_dir }}/sonarqube-{{ sonar_version }}/bin/linux-x86-64/sonar.sh start
+      ExecStop={{ sonar_install_dir }}/sonarqube-{{ sonar_version }}/bin/linux-x86-64/sonar.sh stop
+      User={{ sonar_user }}
+      Group={{ sonar_group }}
+      Restart=always
+      LimitNOFILE=65536
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
+  become: yes
+
+# Reload systemd
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+  become: yes
+
+# Enable and start service
+- name: Enable and start SonarQube service
+  systemd:
+    name: sonarqube
+    state: started
+    enabled: yes
+  become: yes
