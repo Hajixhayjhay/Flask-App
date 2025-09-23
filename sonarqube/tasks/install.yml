@@ -27,11 +27,12 @@
     mode: '0755'
 
 - name: Download SonarQube
-  ansible.builtin.get_url:
-    url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-10.4.0.65466.zip"
+  get_url:
+    url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-10.4.0.92992.zip"
     dest: /tmp/sonarqube.zip
-    headers:
-      User-Agent: "Mozilla/5.0"
+    mode: '0644'
+    force: yes
+    validate_certs: yes
 
 
 - name: Extract SonarQube
