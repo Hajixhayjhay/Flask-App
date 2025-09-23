@@ -22,12 +22,11 @@
     creates: "{{ app_dir }}/data.db"
 
 
-- name: Copy templates folder
-  copy:
-    src: templates/index.html
-    dest: /opt/flask-app/templates/index.html
+- name: Copy templates
+  ansible.builtin.copy:
+    src: templates/
+    dest: "{{ app_dir }}/templates/"
     mode: '0755'
-    remote_src: no
 
 - name: Create systemd service for Flask app
   copy:
