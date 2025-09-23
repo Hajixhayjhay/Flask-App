@@ -1,12 +1,10 @@
----
 plugin: amazon.aws.aws_ec2
 regions:
   - us-east-1
 filters:
   instance-state-name: running
-  "instance-id": "not:i-014872d8e09e56e20"
-hostnames:
-  - private-ip-address
 compose:
-  ansible_host: private-ip-address
-strict: False
+  ansible_host: public_ip_address   # use public IP for SSH
+keyed_groups:
+  - key: tags.Role
+    prefix: tag_Role_
