@@ -1,2 +1,8 @@
 ---
 # tasks file for flask_app
+- name: Deploy Flask + SQLite App
+  hosts: tag_Role_FlaskApp
+  become: yes
+  tasks:
+    - include_tasks: install.yml
+    - include_tasks: config.yml
