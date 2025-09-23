@@ -1,4 +1,4 @@
-  tasks:
+
     # ---------------- Ubuntu Tasks ----------------
     - name: Update apt cache (Ubuntu)
       apt:
