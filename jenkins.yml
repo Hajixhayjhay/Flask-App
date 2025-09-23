@@ -5,4 +5,4 @@
     - jenkins
   vars:
     jenkins_port: 8080
-    jenkins_java_version: 11
+    

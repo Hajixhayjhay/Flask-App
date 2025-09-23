@@ -1,0 +1,19 @@
+- name:  Ensure Python3 & pip are installed
+  yum:
+    name: 
+      - python3
+      - python3-pip
+    state: present
+  
+
+
+- name: Install Flask
+  yum:
+    name: flask
+    state: present
+
+
+- name: Install SQLite
+  yum:
+    name: sqlite
+    state: present
