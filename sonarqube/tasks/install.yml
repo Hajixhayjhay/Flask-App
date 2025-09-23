@@ -28,6 +28,7 @@
   get_url:
     url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-{{ sonar_version }}.zip"
     dest: "/tmp/sonarqube.zip"
+    mode: '0644'
 
 
 # Unzip SonarQube
