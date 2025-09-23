@@ -1,116 +1,111 @@
+# ---------------- Ubuntu Tasks (Jenkins Master) ----------------
+- name: Update apt cache (Ubuntu)
+  ansible.builtin.apt:
+    update_cache: yes
+  when: ansible_distribution == "Ubuntu"
 
-    # ---------------- Ubuntu Tasks ----------------
-    - name: Update apt cache (Ubuntu)
-      apt:
-        update_cache: yes
-      when: ansible_distribution == "Ubuntu"
+- name: Download Jenkins keyring (Ubuntu)
+  ansible.builtin.get_url:
+    url: https://pkg.jenkins.io/debian/jenkins.io-2023.key
+    dest: /usr/share/keyrings/jenkins-keyring.asc
+    mode: '0644'
+  when: ansible_distribution == "Ubuntu"
 
-    - name: Download Jenkins keyring (Ubuntu)
-      ansible.builtin.get_url:
-        url: https://pkg.jenkins.io/debian/jenkins.io-2023.key
-        dest: /usr/share/keyrings/jenkins-keyring.asc
-        mode: '0644'
-      when: ansible_distribution == "Ubuntu"
-      
+- name: Add Jenkins repository (Ubuntu)
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian binary/"
+    state: present
+  when: ansible_distribution == "Ubuntu"
 
-    - name: Add Jenkins repository (Ubuntu)
-      ansible.builtin.apt_repository:
-        repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian binary/"
-        state: present
-      when: ansible_distribution == "Ubuntu"
-    
+- name: Install Java and Jenkins (Ubuntu)
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - openjdk-17-jdk
+    - jenkins
+  when: ansible_distribution == "Ubuntu"
 
-    - name: Install Java and Jenkins (Ubuntu)
-      apt:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - openjdk-17-jdk
-        - jenkins
-      when: ansible_distribution == "Ubuntu"
-      
+# ---------------- Amazon Linux / RHEL Tasks (Jenkins Agent) ----------------
+- name: Update yum cache (Amazon/RHEL)
+  ansible.builtin.yum:
+    name: "*"
+    state: latest
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
-    # ---------------- Amazon Linux / RHEL Tasks ----------------
-    - name: Update yum cache (Amazon/RHEL)
-      yum:
-        name: "*"
-        state: latest
-      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+- name: Install Java 17 (Amazon/RHEL)
+  ansible.builtin.yum:
+    name: java-17-amazon-corretto-devel
+    state: present
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
-    - name: Install Java 17 (Amazon/RHEL)
-      yum:
-        name: java-17-amazon-corretto-devel
-        state: present
-      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
-     
+- name: Import Jenkins GPG key (Amazon/RHEL)
+  ansible.builtin.rpm_key:
+    state: present
+    key: https://pkg.jenkins.io/redhat/jenkins.io-2023.key
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
-    - name: Import Jenkins GPG key (Amazon/RHEL)
-      ansible.builtin.rpm_key:
-        state: present
-        key: https://pkg.jenkins.io/redhat/jenkins.io-2023.key
-      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
-    
+- name: Add Jenkins repository (Amazon/RHEL)
+  ansible.builtin.get_url:
+    url: https://pkg.jenkins.io/redhat/jenkins.repo
+    dest: /etc/yum.repos.d/jenkins.repo
+    mode: '0644'
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
-    - name: Add Jenkins repository (Amazon/RHEL)
-      ansible.builtin.get_url:
-        url: https://pkg.jenkins.io/redhat/jenkins.repo
-        dest: /etc/yum.repos.d/jenkins.repo
-        mode: '0644'
-      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
-     
+- name: Install Jenkins (Amazon/RHEL)
+  ansible.builtin.yum:
+    name: jenkins
+    state: present
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
-    - name: Install Jenkins (Amazon/RHEL)
-      yum:
-        name: jenkins
-        state: present
-      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
-      
+# ---------------- Common Tasks ----------------
+- name: Ensure Jenkins service is enabled and started
+  ansible.builtin.systemd:
+    name: jenkins
+    enabled: true
+    state: started
+    daemon_reload: true
 
-    # ---------------- Common Tasks ----------------
-    - name: Ensure Jenkins service is enabled and started
-      ansible.builtin.systemd:
-        name: jenkins
-        enabled: true
-        state: started
-        daemon_reload: true
+- name: Wait for Jenkins to start
+  ansible.builtin.wait_for:
+    port: "{{ jenkins_port }}"
+    host: "{{ ansible_host | default('127.0.0.1') }}"
+    timeout: 120
 
-    - name: Wait for Jenkins to start
-      ansible.builtin.wait_for:
-        port: "{{ jenkins_port }}"
-        host: "{{ ansible_host | default('127.0.0.1') }}"
-        timeout: 120
-  
-# Install Ansible and boto3
-    - name: Install Ansible and boto3 via pip3
+# ---------------- Python, Ansible, boto3 (Agent only) ----------------
+- name: Install Python packages
+  ansible.builtin.pip:
+    name: "{{ python_packages }}"
+    executable: pip3
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+
+- name: Install Ansible and boto3
   ansible.builtin.pip:
     name: "{{ ansible_packages }}"
     executable: pip3
-      ansible.builtin.pip:
-        name: "{{ python_packages }}"
-      executable: pip3
-      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
-# Install AWS CLI
-    - name: Download AWS CLI installer
-      ansible.builtin.get_url:
-          url: "{{ aws_cli_url }}"
-          dest: "{{ aws_cli_dest }}"
-      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+# ---------------- AWS CLI (Agent only) ----------------
+- name: Download AWS CLI installer
+  ansible.builtin.get_url:
+    url: "{{ aws_cli_url }}"
+    dest: "{{ aws_cli_dest }}"
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
-    - name: Unzip AWS CLI installer
-      ansible.builtin.unarchive:
-        src: "{{ aws_cli_dest }}"
-        dest: "/tmp/"
-        remote_src: yes
-      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+- name: Unzip AWS CLI installer
+  ansible.builtin.unarchive:
+    src: "{{ aws_cli_dest }}"
+    dest: "/tmp/"
+    remote_src: yes
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
-    - name: Install AWS CLI
-      ansible.builtin.command:
-      cmd: "/tmp/aws/install"
-      creates: "/usr/local/bin/aws"
-      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+- name: Install AWS CLI
+  ansible.builtin.command:
+    cmd: "/tmp/aws/install"
+    creates: "/usr/local/bin/aws"
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
-    - name: Verify AWS CLI installation
-      ansible.builtin.command:
-        cmd: "aws --version"
-      when
+- name: Verify AWS CLI installation
+  ansible.builtin.command:
+    cmd: "aws --version"
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
