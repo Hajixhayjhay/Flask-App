@@ -2,7 +2,7 @@
 # Install Java (generic Linux)
 - name: Ensure Java 17 is installed
   package:
-    name: openjdk-17-jdk
+    name: openjdk-17-amazon-corretto-devel
     state: present
   become: yes
 
