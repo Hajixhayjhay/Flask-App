@@ -1,83 +1,30 @@
----
-# Install Java and utilities
-- name: Install Java 17 (Amazon/RHEL)
-  ansible.builtin.yum:
-    name: 
-      - java-17-amazon-corretto-devel
-      - unzip
-      - wget
+- name: Download SonarQube
+  get_url:
+    url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-10.3.0.61060.zip"
+    dest: /tmp/sonarqube.zip
 
-    state: present
-  
-# Create sonar group
-- name: Create sonar group
-  group:
-    name: "{{ sonar_group }}"
-    state: present
+- name: Extract SonarQube
+  unarchive:
+    src: /tmp/sonarqube.zip
+    dest: /opt
+    remote_src: yes
 
-# Create sonar user
-- name: Create sonar user
+- name: Create SonarQube user and group
   user:
-    name: "{{ sonar_user }}"
-    group: "{{ sonar_group }}"
+    name: sonar
+    group: sonar
     create_home: no
     shell: /bin/false
 
-# Download SonarQube
-- name: Download SonarQube
-  get_url:
-    url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-{{ sonar_version }}.zip"
-    dest: /opt
-    mode: '0644'
-
-
-# Unzip SonarQube
-- name: Unzip SonarQube
-  unarchive:
-    src: /opt/sonarqube.zip
-    dest: "{{ sonar_install_dir }}"
-    remote_src: yes
-    creates: "{{ sonar_install_dir }}/sonarqube-{{ sonar_version }}"
-
-# Set ownership
-- name: Change ownership to sonar user
+- name: Set ownership of SonarQube folder
   file:
-    path: "{{ sonar_install_dir }}/sonarqube-{{ sonar_version }}"
-    owner: "{{ sonar_user }}"
-    group: "{{ sonar_group }}"
-    state: directory
+    path: /opt/sonarqube-10.3.0.61060
+    owner: sonar
+    group: sonar
     recurse: yes
 
-# Create systemd service
-- name: Create systemd service for SonarQube
-  copy:
-    dest: /etc/systemd/system/sonarqube.service
-    content: |
-      [Unit]
-      Description=SonarQube service
-      After=syslog.target network.target
-
-      [Service]
-      Type=forking
-      ExecStart={{ sonar_install_dir }}/sonarqube-{{ sonar_version }}/bin/linux-x86-64/sonar.sh start
-      ExecStop={{ sonar_install_dir }}/sonarqube-{{ sonar_version }}/bin/linux-x86-64/sonar.sh stop
-      User={{ sonar_user }}
-      Group={{ sonar_group }}
-      Restart=always
-      LimitNOFILE=65536
-
-      [Install]
-      WantedBy=multi-user.target
-    mode: '0644'
-
-# Reload systemd
-- name: Reload systemd daemon
-  systemd:
-    daemon_reload: yes
-
-# Enable and start service
-- name: Enable and start SonarQube service
-  systemd:
-    name: sonarqube
-    state: started
-    enabled: yes
+- name: Set permissions of SonarQube folder
+  file:
+    path: /opt/sonarqube-10.3.0.61060
+    mode: '0755'
+    recurse: yes
