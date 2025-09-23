@@ -55,16 +55,6 @@
     group: sonar
   tags:
     - change-ownership-sonar
-
-- name: SonarQube configuration (embedded DB)
-  ansible.builtin.blockinfile:
-    path: "/opt/sonarqube/conf/sonar.properties"
-    block: |
-      # Using embedded H2 database (default)
-      sonar.web.host=0.0.0.0
-      sonar.web.port=9000
-    state: present
-
    
 - name: This file is required for SonarQube to run as a service.
   blockinfile:
