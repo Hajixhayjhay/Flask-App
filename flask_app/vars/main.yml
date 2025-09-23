@@ -1,2 +1,6 @@
 ---
 # vars file for flask_app
+app_dir: /opt/flask-app
+flask_user: ec2-user
+flask_port: 5000
+

@@ -7,11 +7,10 @@
   
 
 
-- name: Install Flask
-  yum:
+- name: Install Flask via pip
+  ansible.builtin.pip:
     name: flask
-    state: present
-
+    executable: pip3
 
 - name: Install SQLite
   yum:
