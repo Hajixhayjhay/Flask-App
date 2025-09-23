@@ -1,13 +1,11 @@
 ---
-# Install required dependencies
-- name: Install required packages
+# Install Java and utilities
+- name: Ensure Java 17 and required tools are installed
   yum:
     name:
       - openjdk-17-amazon-corretto-devel
       - unzip
-      - wget
       - curl
-      - git
     state: present
 
 # Create sonar group
@@ -47,7 +45,7 @@
     state: directory
     recurse: yes
 
-# Create systemd service for SonarQube
+# Create systemd service
 - name: Create systemd service for SonarQube
   copy:
     dest: /etc/systemd/system/sonarqube.service
@@ -69,12 +67,12 @@
       WantedBy=multi-user.target
     mode: '0644'
 
-# Reload systemd daemon
+# Reload systemd
 - name: Reload systemd daemon
   systemd:
     daemon_reload: yes
 
-# Enable and start SonarQube service
+# Enable and start service
 - name: Enable and start SonarQube service
   systemd:
     name: sonarqube
