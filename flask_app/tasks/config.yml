@@ -17,9 +17,10 @@
     mode: '0644'
 
 - name: Initialize SQLite database
-  command: sqlite3 /opt/flask-app/data.db < /opt/flask-app/init_db.sql
+  ansible.builtin.shell: sqlite3 "{{ app_dir }}/data.db" < "{{ app_dir }}/init_db.sql"
   args:
-    creates: /opt/flask-app/data.db
+    creates: "{{ app_dir }}/data.db"
+
 
 - name: Copy templates folder
   copy:
