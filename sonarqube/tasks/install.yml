@@ -27,10 +27,12 @@
     mode: '0755'
 
 - name: Download SonarQube
-  ansible.builtin.shell: >
-    wget --user-agent="Mozilla/5.0" -O /tmp/sonarqube.zip "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-10.4.0.65466.zip"
-  args:
-    creates: /tmp/sonarqube.zip
+  ansible.builtin.get_url:
+    url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-10.4.0.65466.zip"
+    dest: /tmp/sonarqube.zip
+    headers:
+      User-Agent: "Mozilla/5.0"
+
 
 - name: Extract SonarQube
   unarchive:
