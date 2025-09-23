@@ -1,2 +1,8 @@
 ---
 # handlers file for sonarqube
+# roles/sonarqube/handlers/main.yml
+- name: Start sonar
+  ansible.builtin.systemd:
+    name: sonar
+    state: started
+    enabled: yes
