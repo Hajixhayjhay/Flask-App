@@ -8,15 +8,17 @@
 
 - name: Download SonarQube
   ansible.builtin.get_url:
-    url: https://binaries.sonarsource.com/Distribution/sonarqube/{{ sonarqube_version }}.zip
-    dest: /opt/{{ sonarqube_version }}.zip
+    url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-{{ sonarqube_version }}.zip"
+    dest: "/opt/sonarqube-{{ sonarqube_version }}.zip"
+    mode: '0644'
   register: get_sonar
   tags:
     - sonar_download
 
+
 - name: Print the state of Download.
   debug: 
-    msg: "soner was downloaded"
+    msg: "sonarqube was downloaded"
   when: get_sonar.changed
   tags:
     - sonar_download
