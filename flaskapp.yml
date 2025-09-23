@@ -1,0 +1,6 @@
+---
+- name: Deploy Flask + SQLite App
+  hosts: flask-app
+  become: yes
+  roles:
+    - flask_app
