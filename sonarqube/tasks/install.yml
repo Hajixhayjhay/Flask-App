@@ -1,17 +1,20 @@
 ---
-# Install Java (generic Linux)
-- name: Ensure Java 17 is installed
+# Install required dependencies
+- name: Install required packages
   yum:
-    name: openjdk-17-amazon-corretto-devel
+    name:
+      - openjdk-17-amazon-corretto-devel
+      - unzip
+      - wget
+      - curl
+      - git
     state: present
-  
 
 # Create sonar group
 - name: Create sonar group
   group:
     name: "{{ sonar_group }}"
     state: present
-  
 
 # Create sonar user
 - name: Create sonar user
@@ -20,14 +23,12 @@
     group: "{{ sonar_group }}"
     create_home: no
     shell: /bin/false
-  
 
 # Download SonarQube
 - name: Download SonarQube
   get_url:
     url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-{{ sonar_version }}.zip"
     dest: /tmp/sonarqube.zip
-  
 
 # Unzip SonarQube
 - name: Unzip SonarQube
@@ -36,7 +37,6 @@
     dest: "{{ sonar_install_dir }}"
     remote_src: yes
     creates: "{{ sonar_install_dir }}/sonarqube-{{ sonar_version }}"
-  
 
 # Set ownership
 - name: Change ownership to sonar user
@@ -46,9 +46,8 @@
     group: "{{ sonar_group }}"
     state: directory
     recurse: yes
-  
 
-# Create systemd service
+# Create systemd service for SonarQube
 - name: Create systemd service for SonarQube
   copy:
     dest: /etc/systemd/system/sonarqube.service
@@ -69,18 +68,15 @@
       [Install]
       WantedBy=multi-user.target
     mode: '0644'
-  become: yes
 
-# Reload systemd
+# Reload systemd daemon
 - name: Reload systemd daemon
   systemd:
     daemon_reload: yes
 
-
-# Enable and start service
+# Enable and start SonarQube service
 - name: Enable and start SonarQube service
   systemd:
     name: sonarqube
     state: started
     enabled: yes
-
