@@ -1,6 +1,6 @@
-- name: Ensure wget is installed
+- name: Ensure Java 17, wget, unzip are installed
   yum:
-    name: 
+    name:
       - java-17-amazon-corretto-devel
       - wget
       - unzip
@@ -11,71 +11,55 @@
     url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-{{ sonarqube_version }}.zip"
     dest: "/opt/sonarqube-{{ sonarqube_version }}.zip"
     mode: '0644'
-  register: get_sonar
-  tags:
-    - sonar_download
-
-
-- name: Print the state of Download.
-  debug: 
-    msg: "sonarqube was downloaded"
-  when: get_sonar.changed
-  tags:
-    - sonar_download
+    remote_src: yes
 
 - name: Extract SonarQube
   ansible.builtin.unarchive:
     src: "/opt/sonarqube-{{ sonarqube_version }}.zip"
     dest: /opt/
     remote_src: yes
-  tags:
-    - sonar_download
 
-- name: Ensure group "sonar" exists
-  ansible.builtin.group:
-    name: sonar
-    state: present
-  tags:
-    - change-ownership-sonar
-
-- name: Add the user 'sonar' with a specific home directory and group 'sonar'
+- name: Ensure sonar user exists
   ansible.builtin.user:
     name: sonar
-    group: sonar
-    home: /opt/{{ sonarqube_version }}
-  tags:
-    - change-ownership-sonar
+    state: present
+    create_home: yes
 
-- name: Recursively change ownership of the /opt/{{ sonarqube_version }} directory
+- name: Set ownership of SonarQube directory
   ansible.builtin.file:
-    path: /opt/{{ sonarqube_version }}
+    path: "/opt/sonarqube-{{ sonarqube_version }}"
     state: directory
     recurse: yes
     owner: sonar
     group: sonar
-  tags:
-    - change-ownership-sonar
-   
-- name: This file is required for SonarQube to run as a service.
-  blockinfile:
-    path: /etc/systemd/system/sonar.service
-    create: true
-    backup: yes
-    state: present
-    block: |
+
+- name: Create systemd service for SonarQube
+  copy:
+    dest: /etc/systemd/system/sonar.service
+    content: |
       [Unit]
       Description=SonarQube service
       After=syslog.target network.target
+
       [Service]
       Type=forking
-      ExecStart=/opt/{{ sonarqube_version }}/bin/linux-x86-64/sonar.sh start
-      ExecStop=/opt/{{ sonarqube_version }}/bin/linux-x86-64/sonar.sh stop
+      ExecStart=/opt/sonarqube-{{ sonarqube_version }}/bin/linux-x86-64/sonar.sh start
+      ExecStop=/opt/sonarqube-{{ sonarqube_version }}/bin/linux-x86-64/sonar.sh stop
       User=sonar
       Group=sonar
       Restart=always
       LimitNOFILE=65536
       LimitNPROC=4096
+
       [Install]
       WantedBy=multi-user.target
-  notify:
-    - Start sonar
+
+- name: Reload systemd to recognize new service
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Start and enable SonarQube service
+  ansible.builtin.systemd:
+    name: sonar
+    state: started
+    enabled: yes
