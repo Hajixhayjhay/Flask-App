@@ -1,5 +1,5 @@
 # defaults file for sonarqube
-sonar_version: "10.4.0.65466"     # Default SonarQube version
+sonar_version: "9.8.0.63668"     # Default SonarQube version
 sonar_install_dir: /opt/sonarqube   # Default installation directory
 sonar_user: sonar                   # Default SonarQube user
 sonar_group: sonar                  # Default SonarQube group

@@ -1,57 +1,84 @@
 - name: Ensure wget is installed
   yum:
     name: 
+      -java-17-amazon-corretto-devel
       - wget
       - unzip
     state: present
 
-- name: Create SonarQube group
-  group:
-    name: "{{ sonar_group }}"
-    state: present
-
-- name: Create SonarQube user
-  user:
-    name: "{{ sonar_user }}"
-    group: "{{ sonar_group }}"
-    create_home: no
-    shell: /bin/bash
-    state: present
-
-- name: Create installation directory
-  file:
-    path: "{{ sonar_install_dir }}"
-    state: directory
-    owner: "{{ sonar_user }}"
-    group: "{{ sonar_group }}"
-    mode: '0755'
-
 - name: Download SonarQube
-  get_url:
-    url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-10.4.0.92992.zip"
-    dest: /tmp/sonarqube.zip
-    mode: '0644'
-    force: yes
-    validate_certs: yes
+  ansible.builtin.get_url:
+    url: https://binaries.sonarsource.com/Distribution/sonarqube/{{ sonarqube_version }}.zip
+    dest: /opt/{{ sonarqube_version }}.zip
+  register: get_sonar
+  tags:
+    - sonar_download
 
+- name: Print the state of Download.
+  debug: 
+    msg: "soner was downloaded"
+  when: get_sonar.changed
+  tags:
+    - sonar_download
 
 - name: Extract SonarQube
-  unarchive:
-    src: /tmp/sonarqube.zip
-    dest: "{{ sonar_install_dir }}"
-    remote_src: yes
-    owner: "{{ sonar_user }}"
-    group: "{{ sonar_group }}"
-    mode: '0755'
+  ansible.builtin.unarchive:
+    src: /opt/{{ sonarqube_version }}.zip
+    dest: /opt
+  tags:
+    - sonar_download
 
-- name: Ensure SonarQube port is open (optional)
-  firewalld:
-    port: "{{ sonar_port }}/tcp"
-    permanent: yes
-    state: enabled
-    immediate: yes
+- name: Ensure group "sonar" exists
+  ansible.builtin.group:
+    name: sonar
+    state: present
+  tags:
+    - change-ownership-sonar
 
-- name: Start SonarQube
-  shell: "{{ sonar_install_dir }}/sonarqube-{{ sonar_version }}/bin/linux-x86-64/sonar.sh start"
-  become: yes
-  become_user: "{{ sonar_user }}"
+- name: Add the user 'sonar' with a specific home directory and group 'sonar'
+  ansible.builtin.user:
+    name: sonar
+    group: sonar
+    home: /opt/{{ sonarqube_version }}
+  tags:
+    - change-ownership-sonar
+
+- name: Recursively change ownership of the /opt/{{ sonarqube_version }} directory
+  ansible.builtin.file:
+    path: /opt/{{ sonarqube_version }}
+    state: directory
+    recurse: yes
+    owner: sonar
+    group: sonar
+  tags:
+    - change-ownership-sonar
+
+- name: SonarQube configuration.
+  blockinfile:
+    path: /opt/{{ sonarqube_version }}/conf/sonar.properties
+    state: present
+    
+   
+- name: This file is required for SonarQube to run as a service.
+  blockinfile:
+    path: /etc/systemd/system/sonar.service
+    create: true
+    backup: yes
+    state: present
+    block: |
+      [Unit]
+      Description=SonarQube service
+      After=syslog.target network.target
+      [Service]
+      Type=forking
+      ExecStart=/opt/{{ sonarqube_version }}/bin/linux-x86-64/sonar.sh start
+      ExecStop=/opt/{{ sonarqube_version }}/bin/linux-x86-64/sonar.sh stop
+      User=sonar
+      Group=sonar
+      Restart=always
+      LimitNOFILE=65536
+      LimitNPROC=4096
+      [Install]
+      WantedBy=multi-user.target
+  notify:
+    - Start sonar
