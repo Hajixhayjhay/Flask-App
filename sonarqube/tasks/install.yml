@@ -1,13 +1,14 @@
 ---
 # Install Java and utilities
-- name: Ensure Java 17 and required tools are installed
-  yum:
-    name:
-      - openjdk-17-amazon-corretto-devel
+- name: Install Java 17 (Amazon/RHEL)
+  ansible.builtin.yum:
+    name: 
+      - java-17-amazon-corretto-devel
       - unzip
-      - curl
-    state: present
+      - wget
 
+    state: present
+  
 # Create sonar group
 - name: Create sonar group
   group:
