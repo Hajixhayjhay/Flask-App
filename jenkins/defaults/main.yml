@@ -1,2 +1,21 @@
 ---
 # defaults file for jenkins
+system_packages:
+  - python3
+  - python3-pip
+  - git
+  - unzip
+  - wget
+  - tar
+
+python_packages:
+  - flask
+  - pytest
+  - pytest-cov
+
+ansible_packages:
+  - ansible
+  - boto3
+
+aws_cli_url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+aws_cli_dest: "/tmp/awscliv2.zip"

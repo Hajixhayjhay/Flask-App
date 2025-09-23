@@ -79,7 +79,38 @@
         port: "{{ jenkins_port }}"
         host: "{{ ansible_host | default('127.0.0.1') }}"
         timeout: 120
-        
+  
+# Install Ansible and boto3
+    - name: Install Ansible and boto3 via pip3
+  ansible.builtin.pip:
+    name: "{{ ansible_packages }}"
+    executable: pip3
+      ansible.builtin.pip:
+        name: "{{ python_packages }}"
+      executable: pip3
+      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
+# Install AWS CLI
+    - name: Download AWS CLI installer
+      ansible.builtin.get_url:
+          url: "{{ aws_cli_url }}"
+          dest: "{{ aws_cli_dest }}"
+      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
- 
+    - name: Unzip AWS CLI installer
+      ansible.builtin.unarchive:
+        src: "{{ aws_cli_dest }}"
+        dest: "/tmp/"
+        remote_src: yes
+      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+
+    - name: Install AWS CLI
+      ansible.builtin.command:
+      cmd: "/tmp/aws/install"
+      creates: "/usr/local/bin/aws"
+      when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+
+    - name: Verify AWS CLI installation
+      ansible.builtin.command:
+        cmd: "aws --version"
+      when
