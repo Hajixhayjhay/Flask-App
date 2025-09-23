@@ -1,7 +1,7 @@
 - name: Ensure wget is installed
   yum:
     name: 
-      -java-17-amazon-corretto-devel
+      - java-17-amazon-corretto-devel
       - wget
       - unzip
     state: present
@@ -57,7 +57,7 @@
   blockinfile:
     path: /opt/{{ sonarqube_version }}/conf/sonar.properties
     state: present
-    
+
    
 - name: This file is required for SonarQube to run as a service.
   blockinfile:
