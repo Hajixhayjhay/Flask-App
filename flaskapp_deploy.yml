@@ -1,0 +1,12 @@
+---
+- name: Deploy Flask + SQLite App
+  hosts: tag_Role_FlaskApp
+  become: yes
+  roles:
+    - flask_app
+  vars:
+        app_name: flaskapp
+        deploy_dir: /opt/flaskapp
+        venv_dir: /opt/flaskapp/venv
+        s3_bucket: your-s3-bucket-name
+        artifact: flaskapp.tar.gz
