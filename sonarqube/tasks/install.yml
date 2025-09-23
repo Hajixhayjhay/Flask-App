@@ -1,7 +1,7 @@
 ---
 # Install Java (generic Linux)
 - name: Ensure Java 17 is installed
-  package:
+  yum:
     name: openjdk-17-amazon-corretto-devel
     state: present
   become: yes
