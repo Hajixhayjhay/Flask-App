@@ -4,14 +4,14 @@
   yum:
     name: openjdk-17-amazon-corretto-devel
     state: present
-  become: yes
+  
 
 # Create sonar group
 - name: Create sonar group
   group:
     name: "{{ sonar_group }}"
     state: present
-  become: yes
+  
 
 # Create sonar user
 - name: Create sonar user
@@ -20,14 +20,14 @@
     group: "{{ sonar_group }}"
     create_home: no
     shell: /bin/false
-  become: yes
+  
 
 # Download SonarQube
 - name: Download SonarQube
   get_url:
     url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-{{ sonar_version }}.zip"
     dest: /tmp/sonarqube.zip
-  become: yes
+  
 
 # Unzip SonarQube
 - name: Unzip SonarQube
@@ -36,7 +36,7 @@
     dest: "{{ sonar_install_dir }}"
     remote_src: yes
     creates: "{{ sonar_install_dir }}/sonarqube-{{ sonar_version }}"
-  become: yes
+  
 
 # Set ownership
 - name: Change ownership to sonar user
@@ -46,7 +46,7 @@
     group: "{{ sonar_group }}"
     state: directory
     recurse: yes
-  become: yes
+  
 
 # Create systemd service
 - name: Create systemd service for SonarQube
