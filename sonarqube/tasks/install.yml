@@ -25,8 +25,9 @@
 
 - name: Extract SonarQube
   ansible.builtin.unarchive:
-    src: /opt/{{ sonarqube_version }}.zip
-    dest: /opt
+    src: "/opt/sonarqube-{{ sonarqube_version }}.zip"
+    dest: /opt/
+    remote_src: yes
   tags:
     - sonar_download
 
