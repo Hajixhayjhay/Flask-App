@@ -75,7 +75,7 @@
 - name: Reload systemd daemon
   systemd:
     daemon_reload: yes
-  become: yes
+
 
 # Enable and start service
 - name: Enable and start SonarQube service
@@ -83,4 +83,4 @@
     name: sonarqube
     state: started
     enabled: yes
-  become: yes
+
