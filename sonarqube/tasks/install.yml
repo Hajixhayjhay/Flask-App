@@ -1,18 +1,3 @@
-- name: Ensure Java 17, wget, unzip are installed
-  yum:
-    name:
-      - java-17-amazon-corretto-devel
-      - wget
-      - unzip
-    state: present
-
-- name: Download SonarQube
-  ansible.builtin.get_url:
-    url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-{{ sonarqube_version }}.zip"
-    dest: "/opt/sonarqube-{{ sonarqube_version }}.zip"
-    mode: '0644'
-    remote_src: yes
-
 - name: Extract SonarQube
   ansible.builtin.unarchive:
     src: "/opt/sonarqube-{{ sonarqube_version }}.zip"
