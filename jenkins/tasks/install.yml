@@ -80,8 +80,4 @@
         host: "{{ ansible_host | default('127.0.0.1') }}"
         timeout: 120
 
-  handlers:
-    - name: Restart Jenkins
-      ansible.builtin.systemd:
-        name: jenkins
-        state: restarted
+ 
