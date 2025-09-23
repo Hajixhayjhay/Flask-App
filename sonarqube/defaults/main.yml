@@ -1,7 +1,7 @@
 
 # defaults file for sonarqube
 sonar_version: "10.4.0.65466"    # Example version
-sonar_install_dir: /opt/sonarqube
+sonar_install_dir: /opt
 sonar_user: sonar
 sonar_group: sonar
 sonar_port: 9000

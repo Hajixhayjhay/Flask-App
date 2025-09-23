@@ -27,14 +27,14 @@
 - name: Download SonarQube
   get_url:
     url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-{{ sonar_version }}.zip"
-    dest: "/tmp/sonarqube.zip"
+    dest: /opt
     mode: '0644'
 
 
 # Unzip SonarQube
 - name: Unzip SonarQube
   unarchive:
-    src: /tmp/sonarqube.zip
+    src: /opt/sonarqube.zip
     dest: "{{ sonar_install_dir }}"
     remote_src: yes
     creates: "{{ sonar_install_dir }}/sonarqube-{{ sonar_version }}"
