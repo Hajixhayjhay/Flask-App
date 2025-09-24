@@ -1,7 +1,5 @@
 pipeline {
-    agent {
-        label 'JenkinsAgent'   // Jenkins agent builds the code
-    }
+    agent { label 'JenkinsAgent' }
 
     environment {
         APP_NAME = 'flaskapp'
@@ -14,7 +12,7 @@ pipeline {
         GIT_CREDENTIALS = 'git_credentials'
         AWS_CREDENTIALS = 'aws_credentials'
         EMAIL_CREDENTIALS = 'email_credentials'
-        FLASK_PORT = 'flask_port'  // Optional, for reference
+        FLASK_PORT = 'flask_port'
     }
 
     options {
@@ -22,8 +20,7 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
-     {
-        stages {
+    stages {
         stage('Checkout SCM') {
             steps {
                 git branch: 'dev',
@@ -31,6 +28,7 @@ pipeline {
                     credentialsId: "${GIT_CREDENTIALS}"
             }
         }
+
         stage('Setup Python') {
             steps {
                 sh 'python3 -m venv ${VENV_DIR}'
@@ -44,7 +42,7 @@ pipeline {
                 sh './${VENV_DIR}/bin/pytest --junitxml=test-reports/results.xml --cov=. --cov-report xml:coverage.xml'
             }
             post {
-               stages always {
+                always {
                     junit 'test-reports/*.xml'
                     cobertura coberturaReportFile: 'coverage.xml'
                 }
@@ -59,17 +57,14 @@ pipeline {
 
         stage('Upload to S3') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
-                                  credentialsId: "${AWS_CREDENTIALS}"]]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${AWS_CREDENTIALS}"]]) {
                     sh "aws s3 cp ${ARTIFACT} s3://${S3_BUCKET}/${ARTIFACT}"
                 }
             }
         }
 
         stage('Deploy via Ansible') {
-            when {
-                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
-            }
+            when { expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' } }
             steps {
                 ansiblePlaybook(
                     playbook: "${DEPLOY_PLAYBOOK}",
