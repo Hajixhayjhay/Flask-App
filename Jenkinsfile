@@ -22,7 +22,7 @@ pipeline {
         timestamps()
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
-  stage('Checkout') {
+        stage('Checkout') {
             steps {
                 withCredentials([string(credentialsId: 'git_credentials', variable: 'GIT_URL')]) {
                     sh '''
