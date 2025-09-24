@@ -37,19 +37,24 @@ pipeline {
                 sh './${VENV_DIR}/bin/pip install --upgrade pip'
                 sh './${VENV_DIR}/bin/pip install -r flask_app/files/requirements.txt'
                 sh './${VENV_DIR}/bin/pip install pytest pytest-cov'
-                sh 'mkdir -p test-reports'
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh './${VENV_DIR}/bin/pytest flask_app/tests --junitxml=test-reports/results.xml --cov=flask_app/files --cov-report xml:coverage.xml'
+                sh '''
+                    mkdir -p test-reports
+                    ./${VENV_DIR}/bin/pytest flask_app/tests \
+                        --junitxml=test-reports/results.xml \
+                        --cov=flask_app/files \
+                        --cov-report xml:coverage.xml
+                '''
             }
             post {
                 always {
                     junit 'test-reports/*.xml'
-                    // Coverage plugin for Jenkins
-                    publishCoverage adapters: [coberturaAdapter('coverage.xml')]
+                    // Publish coverage in Jenkins
+                    recordCoverage tools: [cobertura('coverage.xml')]
                 }
             }
         }
