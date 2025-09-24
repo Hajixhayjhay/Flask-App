@@ -22,14 +22,13 @@ pipeline {
         stage('Setup Python') {
             steps {
                 sh """
-                # Create venv only if it doesn't exist
-                [ ! -d "${VENV}" ] && python3 -m venv ${VENV}
+                # Recreate virtualenv fresh each build
+                python3 -m venv ${VENV}
 
-                # Activate venv and install requirements
-                source ${VENV}/bin/activate
-                pip install --upgrade pip
-                pip install -r flask_app/files/requirements.txt
-                pip install pytest pytest-cov
+                # Install dependencies
+                ${VENV}/bin/pip install --upgrade pip
+                ${VENV}/bin/pip install -r flask_app/files/requirements.txt
+                ${VENV}/bin/pip install pytest pytest-cov
 
                 mkdir -p test-reports
                 """
@@ -39,10 +38,9 @@ pipeline {
         stage('Run Tests with Coverage') {
             steps {
                 sh """
-                source ${VENV}/bin/activate
-                pytest flask_app/tests \
+                ${VENV}/bin/pytest flask_app/tests \
                     --junitxml=test-reports/results.xml \
-                    --cov=flask_app.files \
+                    --cov=flask_app \
                     --cov-report xml:coverage.xml \
                     --cov-report term-missing
                 """
@@ -60,6 +58,16 @@ pipeline {
                 archiveArtifacts artifacts: 'coverage.xml', allowEmptyArchive: true
             }
         }
+
+        stage('Deploy App') {
+            steps {
+                ansiblePlaybook(
+                    playbook: 'flaskapp_deploy.yml',
+                    inventory: 'inventory/hosts',
+                    extras: '--tags deploy'
+                )
+            }
+        }
     }
 
     post {
@@ -68,10 +76,10 @@ pipeline {
             cleanWs()
         }
         success {
-            echo "Build succeeded!"
+            echo "Build and deployment succeeded!"
         }
         failure {
-            echo "Build failed. Check test reports and coverage."
+            echo "Build or deployment failed. Check test reports and logs."
         }
     }
 }
