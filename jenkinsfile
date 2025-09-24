@@ -11,10 +11,10 @@ pipeline {
         VENV_DIR = 'venv'
         DEPLOY_PLAYBOOK = 'flaskapp_deploy.yml'
         INVENTORY_FILE = 'my_inventory.aws_ec2.yml'
-        GIT_CREDENTIALS = 'git-jenkins'
-        AWS_CREDENTIALS = 'aws-jenkins'
-        EMAIL_CREDENTIALS = 'email-jenkins'
-        FLASK_PORT = '5000'  // Optional, for reference
+        GIT_CREDENTIALS = 'github_credentials'
+        AWS_CREDENTIALS = 'aws_credentials'
+        EMAIL_CREDENTIALS = 'email_credentials'
+        FLASK_PORT = 'flask_port'  // Optional, for reference
     }
 
     options {
