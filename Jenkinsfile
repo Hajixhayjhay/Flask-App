@@ -12,7 +12,9 @@ pipeline {
         GIT_CREDENTIALS = 'git_credentials'
         AWS_CREDENTIALS = 'aws_credentials'
         EMAIL_CREDENTIALS = 'email_credentials'
-        FLASK_PORT = 'flask_port'
+        SONAR_TOKEN = 'sonar_token'
+        SONARQUBE_ENV = 'SonarQube'
+        FLASK_PORT = '5000'
     }
 
     options {
@@ -33,13 +35,14 @@ pipeline {
             steps {
                 sh 'python3 -m venv ${VENV_DIR}'
                 sh './${VENV_DIR}/bin/pip install --upgrade pip'
-                sh './${VENV_DIR}/bin/pip install -r requirements.txt'
+                sh './${VENV_DIR}/bin/pip install -r flaskapp/files/requirements.txt'
+                sh './${VENV_DIR}/bin/pip install pytest pytest-cov'
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh './${VENV_DIR}/bin/pytest --junitxml=test-reports/results.xml --cov=. --cov-report xml:coverage.xml'
+                sh './${VENV_DIR}/bin/pytest flaskapp/tests --junitxml=test-reports/results.xml --cov=flaskapp/files --cov-report xml:coverage.xml'
             }
             post {
                 always {
@@ -49,9 +52,20 @@ pipeline {
             }
         }
 
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    withCredentials([string(credentialsId: "${SONAR_TOKEN}", variable: 'SONAR_TOKEN')]) {
+                        sh "./${VENV_DIR}/bin/pip install sonar-scanner"
+                        sh "sonar-scanner -Dsonar.projectKey=${APP_NAME} -Dsonar.sources=flaskapp/files -Dsonar.python.coverage.reportPaths=coverage.xml -Dsonar.login=$SONAR_TOKEN"
+                    }
+                }
+            }
+        }
+
         stage('Package Artifact') {
             steps {
-                sh "tar -czf ${ARTIFACT} *"
+                sh "tar -czf ${ARTIFACT} flaskapp/files/*"
             }
         }
 
@@ -83,9 +97,7 @@ pipeline {
             echo "Build and deployment succeeded for build #${BUILD_NUMBER}"
         }
         failure {
-            withCredentials([usernamePassword(credentialsId: "${EMAIL_CREDENTIALS}", 
-                                             usernameVariable: 'EMAIL_USER', 
-                                             passwordVariable: 'EMAIL_PASS')]) {
+            withCredentials([usernamePassword(credentialsId: "${EMAIL_CREDENTIALS}", usernameVariable: 'EMAIL_USER', passwordVariable: 'EMAIL_PASS')]) {
                 mail to: 'you@example.com',
                      subject: "Build Failed: ${currentBuild.fullDisplayName}",
                      body: "Check Jenkins for details: ${env.BUILD_URL}"
