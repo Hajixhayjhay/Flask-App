@@ -42,12 +42,13 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                sh './${VENV_DIR}/bin/pytest flaskapp/tests --junitxml=test-reports/results.xml --cov=flask_app/files --cov-report xml:coverage.xml'
+                sh './${VENV_DIR}/bin/pytest flask_app/tests --junitxml=test-reports/results.xml --cov=flask_app/files --cov-report xml:coverage.xml'
             }
             post {
                 always {
                     junit 'test-reports/*.xml'
-                    cobertura coberturaReportFile: 'coverage.xml'
+                    // Remove Cobertura for now (plugin missing)
+                    // cobertura coberturaReportFile: 'coverage.xml'
                 }
             }
         }
@@ -57,7 +58,7 @@ pipeline {
                 withSonarQubeEnv("${SONARQUBE_ENV}") {
                     withCredentials([string(credentialsId: "${SONAR_TOKEN}", variable: 'SONAR_TOKEN')]) {
                         sh "./${VENV_DIR}/bin/pip install sonar-scanner"
-                        sh "sonar-scanner -Dsonar.projectKey=${APP_NAME} -Dsonar.sources=flaskapp/files -Dsonar.python.coverage.reportPaths=coverage.xml -Dsonar.login=$SONAR_TOKEN"
+                        sh "sonar-scanner -Dsonar.projectKey=${APP_NAME} -Dsonar.sources=flask_app/files -Dsonar.python.coverage.reportPaths=coverage.xml -Dsonar.login=$SONAR_TOKEN"
                     }
                 }
             }
