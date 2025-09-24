@@ -42,7 +42,7 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                sh './${VENV_DIR}/bin/pytest flaskapp/tests --junitxml=test-reports/results.xml --cov=flaskapp/files --cov-report xml:coverage.xml'
+                sh './${VENV_DIR}/bin/pytest flaskapp/tests --junitxml=test-reports/results.xml --cov=flask_app/files --cov-report xml:coverage.xml'
             }
             post {
                 always {
@@ -65,7 +65,7 @@ pipeline {
 
         stage('Package Artifact') {
             steps {
-                sh "tar -czf ${ARTIFACT} flaskapp/files/*"
+                sh "tar -czf ${ARTIFACT} flask_app/files/*"
             }
         }
 
