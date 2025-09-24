@@ -22,15 +22,16 @@ pipeline {
         timestamps()
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
-  stages {
-        stage('Checkout SCM') {
+  stage('Checkout') {
             steps {
-                git branch: 'dev',
-                    url: '${GIT_URL}',
-                    credentialsId: "${GIT_CREDENTIALS}"
+                withCredentials([string(credentialsId: 'git_credentials', variable: 'GIT_URL')]) {
+                    sh '''
+                        echo "Cloning repo..."
+                        git clone -b dev ${GIT_URL} .
+                    '''
+                }
             }
         }
-
 
         stage('Setup Python') {
             steps {
