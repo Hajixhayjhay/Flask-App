@@ -15,24 +15,22 @@ pipeline {
         AWS_CREDENTIALS = 'aws_credentials'
         EMAIL_CREDENTIALS = 'email_credentials'
         FLASK_PORT = 'flask_port'  // Optional, for reference
+        GIT_URL = 'git_url_secret'      // Optional, for reference
     }
 
     options {
         timestamps()
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
-
-    stages {
-        stage('Checkout') {
+  stages {
+        stage('Checkout SCM') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS}",
-                                                 usernameVariable: 'GIT_USER',
-                                                 passwordVariable: 'GIT_PASS')]) {
-                    git branch: 'main', 
-                        url: "https://$GIT_USER:$GIT_PASS@github.com/your-repo/flaskapp.git"
-                }
+                git branch: 'dev',
+                    url: '${GIT_URL}'
+                    
             }
         }
+
 
         stage('Setup Python') {
             steps {
