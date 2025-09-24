@@ -133,3 +133,19 @@
     port: "{{ jenkins_port }}"
     host: "{{ ansible_host | default('127.0.0.1') }}"
     timeout: 120
+
+- name: Ensure virtual environment exists
+  pip:
+    virtualenv: /home/ec2-user/jenkins/venv
+    virtualenv_command: python3 -m venv
+    state: present
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+
+- name: Install pytest and coverage in virtualenv
+  pip:
+    virtualenv: /home/ec2-user/jenkins/venv
+    name:
+      - pytest
+      - pytest-cov
+    state: present
+  when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
