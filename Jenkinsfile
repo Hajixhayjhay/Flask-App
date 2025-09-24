@@ -37,6 +37,7 @@ pipeline {
                 sh './${VENV_DIR}/bin/pip install --upgrade pip'
                 sh './${VENV_DIR}/bin/pip install -r flask_app/files/requirements.txt'
                 sh './${VENV_DIR}/bin/pip install pytest pytest-cov'
+                sh 'mkdir -p test-reports'
             }
         }
 
@@ -47,8 +48,8 @@ pipeline {
             post {
                 always {
                     junit 'test-reports/*.xml'
-                    // Remove Cobertura for now (plugin missing)
-                    // cobertura coberturaReportFile: 'coverage.xml'
+                    // Coverage plugin for Jenkins
+                    publishCoverage adapters: [coberturaAdapter('coverage.xml')]
                 }
             }
         }
