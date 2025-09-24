@@ -1,6 +1,6 @@
 ---
 - name: Deploy Flask App
-  hosts: JenkinsAgent
+  hosts: tag_Role_FlaskApp
   become: yes
 
   vars:
