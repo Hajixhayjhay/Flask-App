@@ -22,21 +22,15 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
-    stages {
-        stage('Checkout') {
+     {
+        stages {
+        stage('Checkout SCM') {
             steps {
-                // Use username + PAT for secure cloning
-                withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS}", 
-                                                 usernameVariable: 'GIT_USER', 
-                                                 passwordVariable: 'GIT_PAT')]) {
-                    sh '''
-                        echo "Cloning repo..."
-                        git clone -b dev https://$GIT_USER:$GIT_PAT@github.com/Hajixhayjhay/Flask-App.git .
-                    '''
-                }
+                git branch: 'dev',
+                    url: 'https://github.com/Hajixhayjhay/Flask-App.git',
+                    credentialsId: "${GIT_CREDENTIALS}"
             }
         }
-
         stage('Setup Python') {
             steps {
                 sh 'python3 -m venv ${VENV_DIR}'
@@ -50,7 +44,7 @@ pipeline {
                 sh './${VENV_DIR}/bin/pytest --junitxml=test-reports/results.xml --cov=. --cov-report xml:coverage.xml'
             }
             post {
-                always {
+               stages always {
                     junit 'test-reports/*.xml'
                     cobertura coberturaReportFile: 'coverage.xml'
                 }
