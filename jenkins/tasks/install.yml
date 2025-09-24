@@ -26,6 +26,7 @@
   loop:
     - openjdk-17-jdk
     - jenkins
+    - git
   when: ansible_distribution == "Ubuntu"
 
 # ---------------- Amazon Linux / RHEL Tasks (Jenkins Agent) ----------------
