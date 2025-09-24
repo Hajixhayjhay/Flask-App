@@ -41,6 +41,7 @@
       - unzip
       - wget
       - tar
+      - ansible
     state: present
   when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
