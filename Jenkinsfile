@@ -11,23 +11,27 @@ pipeline {
         VENV_DIR = 'venv'
         DEPLOY_PLAYBOOK = 'flaskapp_deploy.yml'
         INVENTORY_FILE = 'my_inventory.aws_ec2.yml'
-        GIT_CREDENTIALS = 'github_credentials'
+        GIT_CREDENTIALS = 'git_credentials'
         AWS_CREDENTIALS = 'aws_credentials'
         EMAIL_CREDENTIALS = 'email_credentials'
         FLASK_PORT = 'flask_port'  // Optional, for reference
-        GIT_URL = 'git_url'      // Optional, for reference
     }
 
     options {
         timestamps()
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
+
+    stages {
         stage('Checkout') {
             steps {
-                withCredentials([string(credentialsId: 'git_credentials', variable: 'GIT_URL')]) {
+                // Use username + PAT for secure cloning
+                withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS}", 
+                                                 usernameVariable: 'GIT_USER', 
+                                                 passwordVariable: 'GIT_PAT')]) {
                     sh '''
                         echo "Cloning repo..."
-                        git clone -b dev ${GIT_URL} .
+                        git clone -b dev https://$GIT_USER:$GIT_PAT@github.com/Hajixhayjhay/Flask-App.git .
                     '''
                 }
             }
@@ -73,7 +77,6 @@ pipeline {
                 expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
-                // Deploy to your app server group
                 ansiblePlaybook(
                     playbook: "${DEPLOY_PLAYBOOK}",
                     inventory: "${INVENTORY_FILE}",
