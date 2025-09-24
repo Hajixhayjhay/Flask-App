@@ -15,7 +15,7 @@ pipeline {
         AWS_CREDENTIALS = 'aws_credentials'
         EMAIL_CREDENTIALS = 'email_credentials'
         FLASK_PORT = 'flask_port'  // Optional, for reference
-        GIT_URL = 'git_url_secret'      // Optional, for reference
+        GIT_URL = 'git_url'      // Optional, for reference
     }
 
     options {
@@ -26,8 +26,8 @@ pipeline {
         stage('Checkout SCM') {
             steps {
                 git branch: 'dev',
-                    url: '${GIT_URL}'
-                    
+                    url: '${GIT_URL}',
+                    credentialsId: "${GIT_CREDENTIALS}"
             }
         }
 
