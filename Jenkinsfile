@@ -35,7 +35,7 @@ pipeline {
             steps {
                 sh 'python3 -m venv ${VENV_DIR}'
                 sh './${VENV_DIR}/bin/pip install --upgrade pip'
-                sh './${VENV_DIR}/bin/pip install -r flaskapp/files/requirements.txt'
+                sh './${VENV_DIR}/bin/pip install -r flask_app/files/requirements.txt'
                 sh './${VENV_DIR}/bin/pip install pytest pytest-cov'
             }
         }
