@@ -147,5 +147,9 @@
     name:
       - pytest
       - pytest-cov
+      - flask
+      - "werkzeug<3.1"
     state: present
   when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
+
+  
