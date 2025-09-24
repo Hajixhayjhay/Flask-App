@@ -22,10 +22,15 @@ pipeline {
         stage('Setup Python') {
             steps {
                 sh """
-                python3 -m venv ${VENV}
-                ${VENV}/bin/pip install --upgrade pip
-                ${VENV}/bin/pip install -r flask_app/files/requirements.txt
-                ${VENV}/bin/pip install pytest pytest-cov
+                # Create venv only if it doesn't exist
+                [ ! -d "${VENV}" ] && python3 -m venv ${VENV}
+
+                # Activate venv and install requirements
+                source ${VENV}/bin/activate
+                pip install --upgrade pip
+                pip install -r flask_app/files/requirements.txt
+                pip install pytest pytest-cov
+
                 mkdir -p test-reports
                 """
             }
@@ -34,7 +39,8 @@ pipeline {
         stage('Run Tests with Coverage') {
             steps {
                 sh """
-                ${VENV}/bin/pytest flask_app/tests \
+                source ${VENV}/bin/activate
+                pytest flask_app/tests \
                     --junitxml=test-reports/results.xml \
                     --cov=flask_app.files \
                     --cov-report xml:coverage.xml \
