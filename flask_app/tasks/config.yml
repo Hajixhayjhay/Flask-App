@@ -1,34 +1,44 @@
-# tasks/main.yml in flask_app role
+# tasks/main.yml
 
-- name: Create app directory
+- name: Ensure app directory exists
   file:
     path: "{{ app_dir }}"
     state: directory
     mode: '0755'
-
-- name: Copy Flask app files
-  copy:
-    src: app.py
-    dest: "{{ app_dir }}/app.py"
-    mode: '0755'
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
 
 - name: Ensure templates directory exists
   file:
     path: "{{ app_dir }}/templates"
     state: directory
     mode: '0755'
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+
+- name: Copy Flask app files
+  copy:
+    src: app.py
+    dest: "{{ app_dir }}/app.py"
+    mode: '0755'
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
 
 - name: Copy Jinja2 template for Flask
   copy:
-    src: templates/index.html
+    src: index.html
     dest: "{{ app_dir }}/templates/index.html"
     mode: '0644'
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
 
 - name: Copy init_db.sql
   copy:
     src: init_db.sql
     dest: "{{ app_dir }}/init_db.sql"
     mode: '0644'
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
 
 - name: Initialize SQLite database if not exists
   shell: sqlite3 "{{ app_dir }}/data.db" < "{{ app_dir }}/init_db.sql"
@@ -40,9 +50,11 @@
     src: requirements.txt
     dest: "{{ app_dir }}/requirements.txt"
     mode: '0644'
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
 
 - name: Install Python virtual environment
-  ansible.builtin.pip:
+  pip:
     requirements: "{{ app_dir }}/requirements.txt"
     executable: pip3
 
@@ -65,11 +77,11 @@
     mode: '0644'
 
 - name: Reload systemd daemon
-  ansible.builtin.systemd:
+  systemd:
     daemon_reload: yes
 
 - name: Enable and start Flask app
-  ansible.builtin.systemd:
+  systemd:
     name: flask-app
     state: started
     enabled: yes
