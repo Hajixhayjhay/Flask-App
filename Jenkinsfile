@@ -62,7 +62,7 @@ pipeline {
             steps {
                 sshagent([SSH_KEY]) {
                     sh """
-                        ansible-playbook -i flaskapp_deploy.yml flaskrole/main.yml \
+                        ansible-playbook -i flaskapp_deploy.yml flaskrole/tasks/main.yml \
                             --extra-vars "artifact=${ARTIFACT} s3_bucket=${S3_BUCKET}"
                     """
                 }
