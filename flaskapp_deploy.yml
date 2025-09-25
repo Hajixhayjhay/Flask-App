@@ -2,18 +2,5 @@
 - name: Deploy Flask App
   hosts: tag_Role_FlaskApp
   become: yes
-
-  vars:
-    app_name: flaskapp
-    deploy_dir: /opt/flaskapp
-    venv_dir: /opt/flaskapp/venv
-    s3_bucket: aj-flaskapp-bucket
-    artifact: "{{ app_name }}.tar.gz"
-
   roles:
-    - role: flask_app
-      vars:
-        deploy_dir: "{{ deploy_dir }}"
-        venv_dir: "{{ venv_dir }}"
-        s3_bucket: "{{ s3_bucket }}"
-        artifact: "{{ artifact }}"
+    - flask_app
