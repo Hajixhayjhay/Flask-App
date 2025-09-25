@@ -1,81 +1,90 @@
-- name: Ensure required system packages are installed
-  ansible.builtin.yum:
-    name:
-      - python3
-      - python3-pip
-      - sqlite
-    state: present
+---
+- name: Deploy Flask App
+  hosts: tag_Role_FlaskApp
+  become: yes
 
-- name: Create app directory
-  ansible.builtin.file:
-    path: /opt/flask-app
-    state: directory
-    mode: '0755'
+  vars:
+    app_name: flaskapp
+    deploy_dir: /opt/flask-app
+    venv_dir: /opt/flask-app/venv
 
-- name: Copy Flask app source code
-  ansible.builtin.copy:
-    src: app.py
-    dest: /opt/flask-app/app.py
-    mode: '0755'
+  tasks:
+    - name: Ensure Python3 & pip are installed
+      yum:
+        name:
+          - python3
+          - python3-pip
+        state: present
 
-- name: Copy init_db.sql
-  ansible.builtin.copy:
-    src: init_db.sql
-    dest: /opt/flask-app/init_db.sql
-    mode: '0644'
+    - name: Ensure SQLite is installed
+      yum:
+        name: sqlite
+        state: present
 
-- name: Initialize SQLite database
-  ansible.builtin.shell: sqlite3 "/opt/flask-app/data.db" < "/opt/flask-app/init_db.sql"
-  args:
-    creates: "/opt/flask-app/data.db"
+    - name: Create app directory
+      file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        mode: '0755'
 
-- name: Copy templates folder
-  ansible.builtin.copy:
-    src: templates/
-    dest: /opt/flask-app/templates/
-    mode: '0755'
+    - name: Copy Flask app files
+      copy:
+        src: app.py
+        dest: "{{ deploy_dir }}/app.py"
+        mode: '0755'
 
-- name: Copy requirements.txt
-  ansible.builtin.copy:
-    src: requirements.txt
-    dest: /opt/flask-app/requirements.txt
-    mode: '0644'
+    - name: Copy templates
+      copy:
+        src: templates/
+        dest: "{{ deploy_dir }}/templates/"
+        mode: '0755'
 
-- name: Create Python virtual environment
-  ansible.builtin.command: python3 -m venv /opt/flask-app/venv
-  args:
-    creates: /opt/flask-app/venv/bin/activate
+    - name: Copy init_db.sql
+      copy:
+        src: init_db.sql
+        dest: "{{ deploy_dir }}/init_db.sql"
+        mode: '0644'
 
-- name: Install dependencies from requirements.txt
-  ansible.builtin.pip:
-    requirements: /opt/flask-app/requirements.txt
-    virtualenv: /opt/flask-app/venv
-    virtualenv_command: python3 -m venv
+    - name: Initialize SQLite database if not exists
+      shell: sqlite3 "{{ deploy_dir }}/data.db" < "{{ deploy_dir }}/init_db.sql"
+      args:
+        creates: "{{ deploy_dir }}/data.db"
 
-- name: Create systemd service for Flask app
-  ansible.builtin.copy:
-    dest: /etc/systemd/system/flask-app.service
-    content: |
-      [Unit]
-      Description=Flask App
-      After=network.target
+    - name: Copy requirements.txt
+      copy:
+        src: requirements.txt
+        dest: "{{ deploy_dir }}/requirements.txt"
+        mode: '0644'
 
-      [Service]
-      User=ec2-user
-      WorkingDirectory=/opt/flask-app
-      ExecStart=/opt/flask-app/venv/bin/python /opt/flask-app/app.py
-      Restart=always
+    - name: Install runtime dependencies from requirements.txt
+      ansible.builtin.pip:
+        requirements: "{{ deploy_dir }}/requirements.txt"
+        executable: pip3
 
-      [Install]
-      WantedBy=multi-user.target
-    mode: '0644'
+    - name: Create systemd service for Flask app
+      copy:
+        dest: /etc/systemd/system/flask-app.service
+        content: |
+          [Unit]
+          Description=Flask App
+          After=network.target
 
-- name: Reload systemd daemon
-  ansible.builtin.systemd:
-    daemon_reload: yes
+          [Service]
+          User=ec2-user
+          WorkingDirectory={{ deploy_dir }}
+          ExecStart=/usr/bin/python3 {{ deploy_dir }}/app.py
+          Restart=always
 
-- name: Enable and start Flask app
-  ansible.builtin.systemd:
-    name: flask-app
-    state: started
-    enabled: yes
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: yes
+
+    - name: Enable and start Flask app
+      ansible.builtin.systemd:
+        name: flask-app
+        state: started
+        enabled: yes
