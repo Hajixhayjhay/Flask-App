@@ -5,7 +5,7 @@ pipeline {
         VENV_DIR = 'venv'
         ARTIFACT = 'flaskapp.tar.gz'
         S3_BUCKET = 'aj-flaskapp-bucket'
-        SSH_KEY = 'ec2-user' // your Jenkins SSH credential ID
+        SSH_KEY = 'key_file' // your Jenkins SSH credential ID
     }
 
     stages {
