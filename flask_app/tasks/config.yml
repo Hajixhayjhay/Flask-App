@@ -70,7 +70,7 @@
     name: flask-app
     state: started
     enabled: yes
----
+
 - name: Open port 5000 for Flask app
   ansible.posix.firewalld:
     port: 5000/tcp
