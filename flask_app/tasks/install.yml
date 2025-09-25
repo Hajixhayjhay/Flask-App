@@ -1,18 +1,80 @@
-- name:  Ensure Python3 & pip are installed
+---
+- name: Ensure Python3 & pip are installed
   yum:
     name: 
       - python3
       - python3-pip
     state: present
-  
 
-
-- name: Install Flask via pip
-  ansible.builtin.pip:
-    name: flask
-    executable: pip3
-
-- name: Install SQLite
+- name: Ensure SQLite is installed
   yum:
     name: sqlite
     state: present
+
+- name: Create app directory
+  file:
+    path: /opt/flask-app
+    state: directory
+    mode: '0755'
+
+- name: Copy Flask app files
+  copy:
+    src: app.py
+    dest: /opt/flask-app/app.py
+    mode: '0755'
+
+- name: Copy templates
+  copy:
+    src: templates/
+    dest: /opt/flask-app/templates/
+    mode: '0755'
+
+- name: Copy init_db.sql
+  copy:
+    src: init_db.sql
+    dest: /opt/flask-app/init_db.sql
+    mode: '0644'
+
+- name: Initialize SQLite database if not exists
+  shell: sqlite3 "/opt/flask-app/data.db" < "/opt/flask-app/init_db.sql"
+  args:
+    creates: "/opt/flask-app/data.db"
+
+- name: Copy requirements.txt
+  copy:
+    src: requirements.txt
+    dest: /opt/flask-app/requirements.txt
+    mode: '0644'
+
+- name: Install runtime dependencies from requirements.txt
+  ansible.builtin.pip:
+    requirements: /opt/flask-app/requirements.txt
+    executable: pip3
+
+- name: Create systemd service for Flask app
+  copy:
+    dest: /etc/systemd/system/flask-app.service
+    content: |
+      [Unit]
+      Description=Flask App
+      After=network.target
+
+      [Service]
+      User=ec2-user
+      WorkingDirectory=/opt/flask-app
+      ExecStart=/usr/bin/python3 /opt/flask-app/app.py
+      Restart=always
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Enable and start Flask app
+  ansible.builtin.systemd:
+    name: flask-app
+    state: started
+    enabled: yes

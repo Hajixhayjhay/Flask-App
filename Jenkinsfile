@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         VENV = "${WORKSPACE}/venv"
+        S3_BUCKET = "your-s3-bucket-name"  // Replace with your S3 bucket
     }
 
     stages {
@@ -22,14 +23,10 @@ pipeline {
         stage('Setup Python') {
             steps {
                 sh """
-                # Recreate virtualenv fresh each build
                 python3 -m venv ${VENV}
-
-                # Install dependencies
                 ${VENV}/bin/pip install --upgrade pip
                 ${VENV}/bin/pip install -r flask_app/files/requirements.txt
                 ${VENV}/bin/pip install pytest pytest-cov
-
                 mkdir -p test-reports
                 """
             }
@@ -59,7 +56,23 @@ pipeline {
             }
         }
 
-        stage('Deploy App') {
+        stage('Create Artifact') {
+            steps {
+                sh """
+                tar -czf flask-app-artifact.tar.gz flask_app/ flask_app/files/ requirements.txt
+                """
+            }
+        }
+
+        stage('Upload Artifact to S3') {
+            steps {
+                withAWS(credentials: 'aws_credentials', region: 'us-east-1') {
+                    s3Upload(bucket: "${S3_BUCKET}", path: "flask-app-artifact.tar.gz", file: "flask-app-artifact.tar.gz")
+                }
+            }
+        }
+
+        stage('Deploy App via Ansible') {
             steps {
                 ansiblePlaybook(
                     playbook: 'flaskapp_deploy.yml',
@@ -76,7 +89,7 @@ pipeline {
             cleanWs()
         }
         success {
-            echo "Build and deployment succeeded!"
+            echo "Build, test, and deployment succeeded!"
         }
         failure {
             echo "Build or deployment failed. Check test reports and logs."

@@ -70,3 +70,36 @@
     name: flask-app
     state: started
     enabled: yes
+---
+- name: Open port 5000 for Flask app
+  ansible.posix.firewalld:
+    port: 5000/tcp
+    permanent: yes
+    state: enabled
+    immediate: yes
+
+- name: Ensure flask-app service is enabled
+  ansible.builtin.systemd:
+    name: flask-app
+    enabled: yes
+
+- name: Ensure flask-app service is running
+  ansible.builtin.systemd:
+    name: flask-app
+    state: started
+
+- name: Wait for Flask app to respond on port 5000
+  ansible.builtin.wait_for:
+    host: "{{ ansible_host | default(inventory_hostname) }}"
+    port: 5000
+    timeout: 30
+
+- name: Verify Flask app response
+  ansible.builtin.uri:
+    url: "http://{{ ansible_host | default(inventory_hostname) }}:5000"
+    return_content: yes
+  register: flask_response
+
+- name: Debug Flask app output
+  debug:
+    msg: "{{ flask_response.content }}"
