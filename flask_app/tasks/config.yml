@@ -1,4 +1,5 @@
 # tasks/main.yml in flask_app role
+
 - name: Create app directory
   file:
     path: "{{ app_dir }}"
@@ -11,11 +12,10 @@
     dest: "{{ app_dir }}/app.py"
     mode: '0755'
 
-- name: Copy templates
-  copy:
-    src: templates/
-    dest: "{{ app_dir }}/templates/"
-    mode: '0755'
+- name: Copy Jinja2 template for Flask
+  template:
+    src: index.html.j2
+    dest: "{{ app_dir }}/templates/index.html"
 
 - name: Copy init_db.sql
   copy:
