@@ -1,68 +1,69 @@
-#
-    - name: Create app directory
-      file:
-        path: "{{ app_dir }}"
-        state: directory
-        mode: '0755'
+# tasks/main.yml in flask_app role
 
-    - name: Copy Flask app files
-      copy:
-        src: app.py
-        dest: "{{ app_dir }}/app.py"
-        mode: '0755'
+- name: Create app directory
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    mode: '0755'
 
-    - name: Copy templates
-      copy:
-        src: templates/
-        dest: "{{ app_dir }}/templates/"
-        mode: '0755'
+- name: Copy Flask app files
+  copy:
+    src: app.py
+    dest: "{{ app_dir }}/app.py"
+    mode: '0755'
 
-    - name: Copy init_db.sql
-      copy:
-        src: init_db.sql
-        dest: "{{ app_dir }}/init_db.sql"
-        mode: '0644'
+- name: Copy templates
+  copy:
+    src: templates/
+    dest: "{{ app_dir }}/templates/"
+    mode: '0755'
 
-    - name: Initialize SQLite database if not exists
-      shell: sqlite3 "{{ app_dir }}/data.db" < "{{ app_dir }}/init_db.sql"
-      args:
-        creates: "{{ app_dir }}/data.db"
+- name: Copy init_db.sql
+  copy:
+    src: init_db.sql
+    dest: "{{ app_dir }}/init_db.sql"
+    mode: '0644'
 
-    - name: Copy requirements.txt
-      copy:
-        src: requirements.txt
-        dest: "{{ app_dir }}/requirements.txt"
-        mode: '0644'
+- name: Initialize SQLite database if not exists
+  shell: sqlite3 "{{ app_dir }}/data.db" < "{{ app_dir }}/init_db.sql"
+  args:
+    creates: "{{ app_dir }}/data.db"
 
-    - name: Install Python virtual environment
-      ansible.builtin.pip:
-        requirements: "{{ app_dir }}/requirements.txt"
-        executable: pip3
+- name: Copy requirements.txt
+  copy:
+    src: requirements.txt
+    dest: "{{ app_dir }}/requirements.txt"
+    mode: '0644'
 
-    - name: Create systemd service for Flask app
-      copy:
-        dest: /etc/systemd/system/flask-app.service
-        content: |
-          [Unit]
-          Description=Flask App
-          After=network.target
+- name: Install Python virtual environment
+  ansible.builtin.pip:
+    requirements: "{{ app_dir }}/requirements.txt"
+    executable: pip3
 
-          [Service]
-          User={{ flask_user }}
-          WorkingDirectory={{ app_dir }}
-          ExecStart=/usr/bin/python3 {{ app_dir }}/app.py
-          Restart=always
+- name: Create systemd service for Flask app
+  copy:
+    dest: /etc/systemd/system/flask-app.service
+    content: |
+      [Unit]
+      Description=Flask App
+      After=network.target
 
-          [Install]
-          WantedBy=multi-user.target
-        mode: '0644'
+      [Service]
+      User={{ flask_user }}
+      WorkingDirectory={{ app_dir }}
+      ExecStart=/usr/bin/python3 {{ app_dir }}/app.py
+      Restart=always
 
-    - name: Reload systemd daemon
-      ansible.builtin.systemd:
-        daemon_reload: yes
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
 
-    - name: Enable and start Flask app
-      ansible.builtin.systemd:
-        name: flask-app
-        state: started
-        enabled: yes
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Enable and start Flask app
+  ansible.builtin.systemd:
+    name: flask-app
+    state: started
+    enabled: yes
