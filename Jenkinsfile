@@ -73,20 +73,21 @@ pipeline {
             }
         }
 
-       stage('Deploy via Ansible') {
-    steps {
-        // Use Jenkins SSH key credential
-        withCredentials([sshUserPrivateKey(credentialsId: 'xapic-key', keyFileVariable: 'KEYFILE')]) {
-            sh '''
-                # Run Ansible playbook using the temporary key file
-                ansible-playbook -i ${INVENTORY} ${PLAYBOOK} \
-                    --private-key $KEYFILE \
-                    --limit tag_Role_FlaskApp \
-                    --extra-vars "s3_bucket=${S3_BUCKET} app_dir=/opt/flaskapp flask_user=ec2-user"
-            '''
+        stage('Deploy via Ansible') {
+            steps {
+                // Use Jenkins SSH key credential
+                withCredentials([sshUserPrivateKey(credentialsId: 'xapic-key', keyFileVariable: 'KEYFILE')]) {
+                    sh '''
+                        # Run Ansible playbook using the temporary key file
+                        ansible-playbook -i ${INVENTORY} ${PLAYBOOK} \
+                            --private-key $KEYFILE \
+                            --limit tag_Role_FlaskApp \
+                            --extra-vars "s3_bucket=${S3_BUCKET} app_dir=/opt/flaskapp flask_user=ec2-user"
+                    '''
+                }
+            }
         }
-    }
-}
+    } // closes stages
 
     post {
         always {
@@ -95,4 +96,4 @@ pipeline {
             cleanWs()
         }
     }
-}
+} // closes pipeline
