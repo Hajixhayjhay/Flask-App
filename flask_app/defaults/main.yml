@@ -1,4 +1,4 @@
----
+#
 # Default variables for flask_app role
 app_dir: /opt/flask-app
 flask_user: ec2-user
