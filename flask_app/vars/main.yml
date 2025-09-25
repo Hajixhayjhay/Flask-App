@@ -3,4 +3,5 @@
 app_dir: /opt/flask-app
 flask_user: ec2-user
 flask_port: 5000
+# vars file for flask_app
 

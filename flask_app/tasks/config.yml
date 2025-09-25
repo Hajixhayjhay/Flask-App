@@ -1,9 +1,4 @@
 
-  vars:
-    app_name: flaskapp
-    deploy_dir: /opt/flask-app
-    venv_dir: /opt/flask-app/venv
-
   tasks:
     - name: Ensure Python3 & pip are installed
       yum:
