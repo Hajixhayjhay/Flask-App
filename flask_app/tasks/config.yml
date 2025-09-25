@@ -1,5 +1,4 @@
 # tasks/main.yml in flask_app role
-
 - name: Create app directory
   file:
     path: "{{ app_dir }}"
