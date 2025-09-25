@@ -2,73 +2,70 @@ pipeline {
     agent { label 'JenkinsAgent' }
 
     environment {
-        VENV = 'venv'
-        DB_PATH = 'flask_app/files/data.db'
-        REQUIREMENTS = 'flask_app/files/requirements.txt'
-        ARTIFACT = 'flaskapp.tar.gz'
-        S3_BUCKET = 'aj-flaskapp-bucket'
-        INVENTORY = 'my_inventory.aws_ec2.yml'
-        PLAYBOOK = 'flaskapp_deploy.yml'
+        ARTIFACT = "flaskapp.tar.gz"
+        S3_BUCKET = "aj-flaskapp-bucket"
+        INVENTORY = "flaskapp_deploy.yml"
+        PLAYBOOK = "flaskrole/main.yml"
     }
 
     stages {
         stage('Checkout SCM') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/dev']],
+                    userRemoteConfigs: [
+                        [url: 'https://github.com/Hajixhayjhay/Flask-App.git', credentialsId: 'github_credentials'],
+                        [url: 'https://github.com/Hajixhayjhay/Flask-App.git', credentialsId: 'github_credentials']
+                    ]
+                ])
             }
         }
 
         stage('Setup Python') {
             steps {
-                sh '''
-                    python3 -m venv ${VENV}
-                    source ${VENV}/bin/activate
+                sh """
+                    python3 -m venv venv
+                    source venv/bin/activate
                     pip install --upgrade pip
-                    pip install -r ${REQUIREMENTS}
+                    pip install -r flask_app/files/requirements.txt
                     pip install pytest pytest-cov
-                '''
+                """
             }
         }
 
         stage('Initialize DB') {
             steps {
-                sh '''
-                    sqlite3 ${DB_PATH} < flask_app/files/init_db.sql || true
-                '''
+                sh "sqlite3 flask_app/files/data.db"
             }
         }
 
         stage('Run Tests with Coverage') {
             steps {
-                sh '''
-                    source ${VENV}/bin/activate
+                sh """
+                    source venv/bin/activate
                     mkdir -p test-reports
-                    pytest flask_app/tests \
-                        --junitxml=test-reports/results.xml \
-                        --cov=flask_app \
-                        --cov-report xml:coverage.xml \
-                        --cov-report term-missing || true
-                '''
+                    pytest flask_app/tests --junitxml=test-reports/results.xml --cov=flask_app --cov-report xml:coverage.xml --cov-report term-missing
+                """
             }
         }
 
         stage('Build & Upload Artifact') {
             steps {
-                sh '''
+                sh """
                     tar -czf ${ARTIFACT} flask_app/
                     aws s3 cp ${ARTIFACT} s3://${S3_BUCKET}/${ARTIFACT}
-                '''
+                """
             }
         }
 
         stage('Deploy via Ansible') {
             steps {
-                withCredentials([string(credentialsId: 'key_file', variable: 'KEYFILE')]) {
-                    sh '''
+                sshagent(['key_file']) {
+                    sh """
                         ansible-playbook -i ${INVENTORY} ${PLAYBOOK} \
-                            --private-key $KEYFILE \
-                            --extra-vars "artifact=${ARTIFACT} s3_bucket=${S3_BUCKET}"
-                    '''
+                        --extra-vars "artifact=${ARTIFACT} s3_bucket=${S3_BUCKET}"
+                    """
                 }
             }
         }
