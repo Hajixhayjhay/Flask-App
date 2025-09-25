@@ -42,7 +42,7 @@
       - wget
       - tar
       - ansible
-      - sqlite3
+      - sqlite-devel
     state: present
   when: ansible_distribution in ["Amazon", "Amazon Linux", "RedHat"]
 
