@@ -3,9 +3,8 @@ plugin: amazon.aws.aws_ec2
 regions:
   - us-east-1
 filters:
-  "tag:Role": "*"   # only EC2s with a Role tag
+  "tag:Role": "FlaskApp"  # Only EC2 instances with Role=FlaskApp
 keyed_groups:
   - key: tags.Role
     prefix: tag_Role
 strict: False
-
