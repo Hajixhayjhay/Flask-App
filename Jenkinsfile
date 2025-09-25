@@ -74,21 +74,15 @@ pipeline {
         }
 
        stage('Deploy via Ansible') {
-     steps {
+    steps {
         sh '''
-            # Activate virtualenv if needed
-            source venv/bin/activate
-
-            # Run the Ansible playbook using your dynamic inventory
-            ansible-playbook \
-                -i my_inventory.aws_ec2.yml \
-                flaskapp_deploy.yml \
+            # Run the Ansible playbook from the workspace root
+            ansible-playbook -i ${INVENTORY} ${PLAYBOOK} \
                 --limit tag_Role_FlaskApp \
-                --extra-vars "s3_bucket=aj-flaskapp-bucket"
+                --extra-vars "s3_bucket=${S3_BUCKET} app_dir=/opt/flaskapp flask_user=ec2-user"
         '''
     }
 }
-
     post {
         always {
             archiveArtifacts artifacts: 'test-reports/*.xml', allowEmptyArchive: true
