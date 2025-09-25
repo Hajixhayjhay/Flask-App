@@ -1,81 +1,80 @@
 
-  tasks:
-    - name: Ensure Python3 & pip are installed
-      yum:
-        name:
-          - python3
-          - python3-pip
-        state: present
+- name: Ensure Python3 & pip are installed
+  yum:
+    name:
+      - python3
+      - python3-pip
+    state: present
 
-    - name: Ensure SQLite is installed
-      yum:
-        name: sqlite
-        state: present
+- name: Ensure SQLite is installed
+  yum:
+    name: sqlite
+    state: present
 
-    - name: Create app directory
-      file:
-        path: "{{ deploy_dir }}"
-        state: directory
-        mode: '0755'
+- name: Create app directory
+  file:
+    path: "{{ deploy_dir }}"
+    state: directory
+    mode: '0755'
 
-    - name: Copy Flask app files
-      copy:
-        src: app.py
-        dest: "{{ deploy_dir }}/app.py"
-        mode: '0755'
+- name: Copy Flask app files
+  copy:
+    src: app.py
+    dest: "{{ deploy_dir }}/app.py"
+    mode: '0755'
 
-    - name: Copy templates
-      copy:
-        src: templates/
-        dest: "{{ deploy_dir }}/templates/"
-        mode: '0755'
+- name: Copy templates
+  copy:
+    src: templates/
+    dest: "{{ deploy_dir }}/templates/"
+    mode: '0755'
 
-    - name: Copy init_db.sql
-      copy:
-        src: init_db.sql
-        dest: "{{ deploy_dir }}/init_db.sql"
-        mode: '0644'
+- name: Copy init_db.sql
+  copy:
+    src: init_db.sql
+    dest: "{{ deploy_dir }}/init_db.sql"
+    mode: '0644'
 
-    - name: Initialize SQLite database if not exists
-      shell: sqlite3 "{{ deploy_dir }}/data.db" < "{{ deploy_dir }}/init_db.sql"
-      args:
-        creates: "{{ deploy_dir }}/data.db"
+- name: Initialize SQLite database if not exists
+  shell: sqlite3 "{{ deploy_dir }}/data.db" < "{{ deploy_dir }}/init_db.sql"
+  args:
+    creates: "{{ deploy_dir }}/data.db"
 
-    - name: Copy requirements.txt
-      copy:
-        src: requirements.txt
-        dest: "{{ deploy_dir }}/requirements.txt"
-        mode: '0644'
+- name: Copy requirements.txt
+  copy:
+    src: requirements.txt
+    dest: "{{ deploy_dir }}/requirements.txt"
+    mode: '0644'
 
-    - name: Install runtime dependencies from requirements.txt
-      ansible.builtin.pip:
-        requirements: "{{ deploy_dir }}/requirements.txt"
-        executable: pip3
+- name: Install runtime dependencies from requirements.txt
+  ansible.builtin.pip:
+    requirements: "{{ deploy_dir }}/requirements.txt"
+    executable: pip3
 
-    - name: Create systemd service for Flask app
-      copy:
-        dest: /etc/systemd/system/flask-app.service
-        content: |
-          [Unit]
-          Description=Flask App
-          After=network.target
+- name: Create systemd service for Flask app
+  copy:
+    dest: /etc/systemd/system/flask-app.service
+    content: |
+      [Unit]
+      Description=Flask App
+      After=network.target
 
-          [Service]
-          User=ec2-user
-          WorkingDirectory={{ deploy_dir }}
-          ExecStart=/usr/bin/python3 {{ deploy_dir }}/app.py
-          Restart=always
+      [Service]
+      User=ec2-user
+      WorkingDirectory={{ deploy_dir }}
+      ExecStart=/usr/bin/python3 {{ deploy_dir }}/app.py
+      Restart=always
 
-          [Install]
-          WantedBy=multi-user.target
-        mode: '0644'
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
 
-    - name: Reload systemd daemon
-      ansible.builtin.systemd:
-        daemon_reload: yes
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
 
-    - name: Enable and start Flask app
-      ansible.builtin.systemd:
-        name: flask-app
-        state: started
-        enabled: yes
+- name: Enable and start Flask app
+  ansible.builtin.systemd:
+    name: flask-app
+    state: started
+    enabled: yes
