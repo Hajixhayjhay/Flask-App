@@ -1,12 +1,4 @@
-
-- name: Deploy Flask App
-  hosts: tag_Role_FlaskApp
-  become: yes
-  vars:
-    app_dir: /opt/flask-app
-    flask_user: ec2-user
-
-  tasks:
+#
     - name: Create app directory
       file:
         path: "{{ app_dir }}"
