@@ -1,7 +1,3 @@
----
-- name: Deploy Flask App
-  hosts: tag_Role_FlaskApp
-  become: yes
 
   vars:
     app_name: flaskapp
