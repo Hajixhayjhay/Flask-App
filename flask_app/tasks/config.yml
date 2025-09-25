@@ -1,67 +1,83 @@
-- name: Create app directory
-  file:
-    path: "{{ app_dir }}"
-    state: directory
-    mode: '0755'
+---
+- name: Deploy Flask app
+  hosts: app_servers
+  vars:
+    app_dir: /opt/flask-app
+    flask_user: ec2-user
 
-- name: Copy Flask app files
-  copy:
-    src: app.py
-    dest: "{{ app_dir }}/app.py"
-    mode: '0755'
+  tasks:
+    - name: Create app directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: '0755'
 
-- name: Copy templates
-  copy:
-    src: templates/
-    dest: "{{ app_dir }}/templates/"
-    mode: '0755'
+    - name: Copy Flask app files
+      copy:
+        src: app.py
+        dest: "{{ app_dir }}/app.py"
+        mode: '0755'
 
-- name: Copy init_db.sql
-  copy:
-    src: init_db.sql
-    dest: "{{ app_dir }}/init_db.sql"
-    mode: '0644'
+    - name: Copy templates
+      copy:
+        src: templates/
+        dest: "{{ app_dir }}/templates/"
+        mode: '0755'
 
-- name: Initialize SQLite database if not exists
-  shell: sqlite3 "{{ app_dir }}/data.db" < "{{ app_dir }}/init_db.sql"
-  args:
-    creates: "{{ app_dir }}/data.db"
+    - name: Copy init_db.sql
+      copy:
+        src: init_db.sql
+        dest: "{{ app_dir }}/init_db.sql"
+        mode: '0644'
 
-- name: Copy requirements.txt
-  copy:
-    src: requirements.txt
-    dest: "{{ app_dir }}/requirements.txt"
-    mode: '0644'
+    - name: Create Python virtual environment
+      ansible.builtin.command: python3 -m venv {{ app_dir }}/venv
+      args:
+        creates: "{{ app_dir }}/venv/bin/activate"
 
-- name: Install runtime dependencies from requirements.txt
-  ansible.builtin.pip:
-    requirements: "{{ app_dir }}/requirements.txt"
-    executable: pip3
+    - name: Install runtime dependencies in virtual environment
+      ansible.builtin.pip:
+        requirements: "{{ app_dir }}/requirements.txt"
+        virtualenv: "{{ app_dir }}/venv"
 
-- name: Create systemd service for Flask app
-  copy:
-    dest: /etc/systemd/system/flask-app.service
-    content: |
-      [Unit]
-      Description=Flask App
-      After=network.target
+    - name: Initialize SQLite database and create messages table
+      ansible.builtin.shell: |
+        sqlite3 {{ app_dir }}/data.db <<EOF
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message TEXT NOT NULL
+        );
+        INSERT INTO messages (message) 
+        SELECT 'Welcome to Flask!' 
+        WHERE NOT EXISTS (SELECT 1 FROM messages);
+        EOF
+      args:
+        creates: "{{ app_dir }}/data.db"
 
-      [Service]
-      User={{ flask_user }}
-      WorkingDirectory={{ app_dir }}
-      ExecStart=/usr/bin/python3 {{ app_dir }}/app.py
-      Restart=always
+    - name: Create systemd service for Flask app
+      copy:
+        dest: /etc/systemd/system/flask-app.service
+        content: |
+          [Unit]
+          Description=Flask App
+          After=network.target
 
-      [Install]
-      WantedBy=multi-user.target
-    mode: '0644'
+          [Service]
+          User={{ flask_user }}
+          WorkingDirectory={{ app_dir }}
+          ExecStart={{ app_dir }}/venv/bin/python {{ app_dir }}/app.py
+          Restart=always
 
-- name: Reload systemd daemon
-  ansible.builtin.systemd:
-    daemon_reload: yes
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
 
-- name: Enable and start Flask app
-  ansible.builtin.systemd:
-    name: flask-app
-    state: started
-    enabled: yes
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: yes
+
+    - name: Enable and start Flask app
+      ansible.builtin.systemd:
+        name: flask-app
+        state: started
+        enabled: yes
