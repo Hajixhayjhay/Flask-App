@@ -19,8 +19,8 @@
     mode: '0755'
 
 - name: Copy Jinja2 template for Flask
-  template:
-    src: index.html.j2
+  copy:
+    src: templates/index.html
     dest: "{{ app_dir }}/templates/index.html"
 
 - name: Copy init_db.sql
