@@ -1,4 +1,3 @@
 
-# defaults file for flask_app
 deploy_dir: /opt/flask-app
-venv_dir: "{{ deploy_dir }}/venv"
+venv_dir: /opt/flask-app/venv
