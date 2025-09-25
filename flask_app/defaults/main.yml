@@ -1,3 +1,6 @@
-
-deploy_dir: /opt/flask-app
-venv_dir: /opt/flask-app/venv
+---
+# Default variables for flask_app role
+app_dir: /opt/flask-app
+flask_user: ec2-user
+flask_port: 5000
+venv_dir: "{{ app_dir }}/venv"
