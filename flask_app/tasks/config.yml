@@ -1,6 +1,7 @@
----
+
 - name: Deploy Flask App
-  hosts: app_servers
+  hosts: tag_Role_FlaskApp
+  become: yes
   vars:
     app_dir: /opt/flask-app
     flask_user: ec2-user
