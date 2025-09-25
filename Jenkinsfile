@@ -75,14 +75,19 @@ pipeline {
 
        stage('Deploy via Ansible') {
     steps {
-        sh '''
-            # Run the Ansible playbook from the workspace root
-            ansible-playbook -i ${INVENTORY} ${PLAYBOOK} \
-                --limit tag_Role_FlaskApp \
-                --extra-vars "s3_bucket=${S3_BUCKET} app_dir=/opt/flaskapp flask_user=ec2-user"
-        '''
+        // Use Jenkins SSH key credential
+        withCredentials([sshUserPrivateKey(credentialsId: 'xapic-key', keyFileVariable: 'KEYFILE')]) {
+            sh '''
+                # Run Ansible playbook using the temporary key file
+                ansible-playbook -i ${INVENTORY} ${PLAYBOOK} \
+                    --private-key $KEYFILE \
+                    --limit tag_Role_FlaskApp \
+                    --extra-vars "s3_bucket=${S3_BUCKET} app_dir=/opt/flaskapp flask_user=ec2-user"
+            '''
+        }
     }
 }
+
     post {
         always {
             archiveArtifacts artifacts: 'test-reports/*.xml', allowEmptyArchive: true
