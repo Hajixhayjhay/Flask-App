@@ -1,5 +1,5 @@
 ---
-- name: Deploy Flask app
+- name: Deploy Flask App
   hosts: app_servers
   vars:
     app_dir: /opt/flask-app
@@ -30,29 +30,21 @@
         dest: "{{ app_dir }}/init_db.sql"
         mode: '0644'
 
-    - name: Create Python virtual environment
-      ansible.builtin.command: python3 -m venv {{ app_dir }}/venv
-      args:
-        creates: "{{ app_dir }}/venv/bin/activate"
-
-    - name: Install runtime dependencies in virtual environment
-      ansible.builtin.pip:
-        requirements: "{{ app_dir }}/requirements.txt"
-        virtualenv: "{{ app_dir }}/venv"
-
-    - name: Initialize SQLite database and create messages table
-      ansible.builtin.shell: |
-        sqlite3 {{ app_dir }}/data.db <<EOF
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            message TEXT NOT NULL
-        );
-        INSERT INTO messages (message) 
-        SELECT 'Welcome to Flask!' 
-        WHERE NOT EXISTS (SELECT 1 FROM messages);
-        EOF
+    - name: Initialize SQLite database if not exists
+      shell: sqlite3 "{{ app_dir }}/data.db" < "{{ app_dir }}/init_db.sql"
       args:
         creates: "{{ app_dir }}/data.db"
+
+    - name: Copy requirements.txt
+      copy:
+        src: requirements.txt
+        dest: "{{ app_dir }}/requirements.txt"
+        mode: '0644'
+
+    - name: Install Python virtual environment
+      ansible.builtin.pip:
+        requirements: "{{ app_dir }}/requirements.txt"
+        executable: pip3
 
     - name: Create systemd service for Flask app
       copy:
@@ -65,7 +57,7 @@
           [Service]
           User={{ flask_user }}
           WorkingDirectory={{ app_dir }}
-          ExecStart={{ app_dir }}/venv/bin/python {{ app_dir }}/app.py
+          ExecStart=/usr/bin/python3 {{ app_dir }}/app.py
           Restart=always
 
           [Install]
