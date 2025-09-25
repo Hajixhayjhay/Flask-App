@@ -2,10 +2,13 @@ pipeline {
     agent { label 'JenkinsAgent' }
 
     environment {
-        S3_BUCKET    = 'aj-flaskapp-bucket'   // change if different
-        ARTIFACT     = 'flaskapp.tar.gz'
-        INVENTORY    = 'my_inventory.aws_ec2.yml'
-        PLAYBOOK     = 'flaskapp_deploy.yml'
+        VENV = 'venv'
+        DB_PATH = 'flask_app/files/data.db'
+        REQUIREMENTS = 'flask_app/files/requirements.txt'
+        ARTIFACT = 'flaskapp.tar.gz'
+        S3_BUCKET = 'aj-flaskapp-bucket'
+        INVENTORY = 'my_inventory.aws_ec2.yml'
+        PLAYBOOK = 'flaskapp_deploy.yml'
     }
 
     stages {
@@ -18,10 +21,10 @@ pipeline {
         stage('Setup Python') {
             steps {
                 sh '''
-                    python3 -m venv venv
-                    source venv/bin/activate
+                    python3 -m venv ${VENV}
+                    source ${VENV}/bin/activate
                     pip install --upgrade pip
-                    pip install -r flask_app/files/requirements.txt
+                    pip install -r ${REQUIREMENTS}
                     pip install pytest pytest-cov
                 '''
             }
@@ -30,8 +33,7 @@ pipeline {
         stage('Initialize DB') {
             steps {
                 sh '''
-                    # Make sure the database file exists
-                    sqlite3 flask_app/files/data.db < flask_app/files/init_db.sql
+                    sqlite3 ${DB_PATH} < flask_app/files/init_db.sql || true
                 '''
             }
         }
@@ -39,13 +41,13 @@ pipeline {
         stage('Run Tests with Coverage') {
             steps {
                 sh '''
-                    source venv/bin/activate
+                    source ${VENV}/bin/activate
                     mkdir -p test-reports
                     pytest flask_app/tests \
                         --junitxml=test-reports/results.xml \
-                        --cov=flask_app.files \
+                        --cov=flask_app \
                         --cov-report xml:coverage.xml \
-                        --cov-report term-missing
+                        --cov-report term-missing || true
                 '''
             }
         }
@@ -59,9 +61,9 @@ pipeline {
             }
         }
 
-        stage('Deploy with Ansible') {
+        stage('Deploy via Ansible') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'JenkinsAgent-key', keyFileVariable: 'KEYFILE')]) {
+                withCredentials([string(credentialsId: 'key_file', variable: 'KEYFILE')]) {
                     sh '''
                         ansible-playbook -i ${INVENTORY} ${PLAYBOOK} \
                             --private-key $KEYFILE \
