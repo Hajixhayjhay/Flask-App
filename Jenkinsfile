@@ -2,28 +2,34 @@ pipeline {
     agent { label 'JenkinsAgent' }
 
     environment {
-        VENV_DIR = "${WORKSPACE}/venv"
-        BUCKET_NAME = "YOUR_BUCKET_NAME" // replace with your S3 bucket
-        ARTIFACT_NAME = "flaskapp.tar.gz"
+        VENV = 'venv'
+        DB_PATH = 'flask_app/files/data.db'
+        REQUIREMENTS = 'flask_app/files/requirements.txt'
+        ARTIFACT = 'flaskapp.tar.gz'
+        S3_BUCKET = 'aj-flaskapp-bucket'
+        INVENTORY = 'my_inventory.aws_ec2.yml'
+        PLAYBOOK = 'flaskapp_deploy.yml'
     }
 
     stages {
+
         stage('Checkout SCM') {
             steps {
-                checkout([$class: 'GitSCM', 
+                checkout([$class: 'GitSCM',
                           branches: [[name: '*/dev']],
-                          userRemoteConfigs: [[url: 'https://github.com/Hajixhayjhay/Flask-App.git', credentialsId: 'github_credentials']]])
+                          userRemoteConfigs: [[url: 'https://github.com/Hajixhayjhay/Flask-App.git',
+                                               credentialsId: 'github_credentials']]])
             }
         }
 
         stage('Setup Python') {
             steps {
                 sh '''
-                python3 -m venv ${VENV_DIR}
-                source ${VENV_DIR}/bin/activate
-                pip install --upgrade pip
-                pip install -r flask_app/files/requirements.txt
-                pip install pytest pytest-cov
+                    python3 -m venv ${VENV}
+                    source ${VENV}/bin/activate
+                    pip install --upgrade pip
+                    pip install -r ${REQUIREMENTS}
+                    pip install pytest pytest-cov
                 '''
             }
         }
@@ -31,8 +37,8 @@ pipeline {
         stage('Initialize DB') {
             steps {
                 sh '''
-                source ${VENV_DIR}/bin/activate
-                sqlite3 flask_app/files/data.db < /dev/null
+                    # Ensure the database exists and initialize tables
+                    sqlite3 ${DB_PATH} < flask_app/files/init_db.sql
                 '''
             }
         }
@@ -40,9 +46,13 @@ pipeline {
         stage('Run Tests with Coverage') {
             steps {
                 sh '''
-                source ${VENV_DIR}/bin/activate
-                mkdir -p test-reports
-                pytest flask_app/tests --junitxml=test-reports/results.xml --cov=flask_app.files --cov-report xml:coverage.xml --cov-report term-missing
+                    source ${VENV}/bin/activate
+                    mkdir -p test-reports
+                    pytest flask_app/tests \
+                        --junitxml=test-reports/results.xml \
+                        --cov=flask_app.files \
+                        --cov-report xml:coverage.xml \
+                        --cov-report term-missing
                 '''
             }
         }
@@ -50,7 +60,7 @@ pipeline {
         stage('Build Artifact') {
             steps {
                 sh '''
-                tar -czf ${ARTIFACT_NAME} flask_app/
+                    tar -czf ${ARTIFACT} flask_app/
                 '''
             }
         }
@@ -58,7 +68,7 @@ pipeline {
         stage('Upload Artifact to S3') {
             steps {
                 sh '''
-                aws s3 cp ${ARTIFACT_NAME} s3://${BUCKET_NAME}/${ARTIFACT_NAME}
+                    aws s3 cp ${ARTIFACT} s3://${S3_BUCKET}/${ARTIFACT}
                 '''
             }
         }
@@ -66,7 +76,7 @@ pipeline {
         stage('Deploy via Ansible') {
             steps {
                 sh '''
-                ansible-playbook -i my_inventory.aws_ec2.yml flaskapp_deploy.yml
+                    ansible-playbook -i ${INVENTORY} ${PLAYBOOK}
                 '''
             }
         }
@@ -74,8 +84,8 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'test-reports/results.xml', allowEmptyArchive: true
-            junit 'test-reports/results.xml'
+            archiveArtifacts artifacts: 'test-reports/*.xml', allowEmptyArchive: true
+            junit 'test-reports/*.xml'
             cleanWs()
         }
     }
