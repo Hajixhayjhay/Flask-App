@@ -34,11 +34,13 @@ pipeline {
             }
         }
 
-        stage('Initialize DB') {
-            steps {
-                sh "sqlite3 flask_app/files/data.db"
-            }
+    stage('Initialize DB') {
+        steps {
+            sh """
+                sqlite3 flask_app/files/data.db < flask_app/files/init_db.sql
+            """
         }
+    }
 
         stage('Run Tests with Coverage') {
             steps {
