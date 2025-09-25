@@ -1,17 +1,25 @@
+- name: Ensure required system packages are installed
+  ansible.builtin.yum:
+    name:
+      - python3
+      - python3-pip
+      - sqlite
+    state: present
+
 - name: Create app directory
-  file:
+  ansible.builtin.file:
     path: /opt/flask-app
     state: directory
     mode: '0755'
 
-- name: Copy Flask app
-  copy:
+- name: Copy Flask app source code
+  ansible.builtin.copy:
     src: app.py
     dest: /opt/flask-app/app.py
     mode: '0755'
 
 - name: Copy init_db.sql
-  copy:
+  ansible.builtin.copy:
     src: init_db.sql
     dest: /opt/flask-app/init_db.sql
     mode: '0644'
@@ -21,14 +29,14 @@
   args:
     creates: "/opt/flask-app/data.db"
 
-- name: Copy templates
+- name: Copy templates folder
   ansible.builtin.copy:
     src: templates/
     dest: /opt/flask-app/templates/
     mode: '0755'
 
 - name: Copy requirements.txt
-  copy:
+  ansible.builtin.copy:
     src: requirements.txt
     dest: /opt/flask-app/requirements.txt
     mode: '0644'
@@ -38,13 +46,14 @@
   args:
     creates: /opt/flask-app/venv/bin/activate
 
-- name: Install Python dependencies
-  ansible.builtin.command: /opt/flask-app/venv/bin/pip install --upgrade pip
-- name: Install required packages
-  ansible.builtin.command: /opt/flask-app/venv/bin/pip install -r /opt/flask-app/requirements.txt
+- name: Install dependencies from requirements.txt
+  ansible.builtin.pip:
+    requirements: /opt/flask-app/requirements.txt
+    virtualenv: /opt/flask-app/venv
+    virtualenv_command: python3 -m venv
 
 - name: Create systemd service for Flask app
-  copy:
+  ansible.builtin.copy:
     dest: /etc/systemd/system/flask-app.service
     content: |
       [Unit]
@@ -54,7 +63,7 @@
       [Service]
       User=ec2-user
       WorkingDirectory=/opt/flask-app
-      ExecStart=/opt/flask-app/venv/bin/python app.py
+      ExecStart=/opt/flask-app/venv/bin/python /opt/flask-app/app.py
       Restart=always
 
       [Install]
@@ -70,36 +79,3 @@
     name: flask-app
     state: started
     enabled: yes
-
-- name: Open port 5000 for Flask app
-  ansible.posix.firewalld:
-    port: 5000/tcp
-    permanent: yes
-    state: enabled
-    immediate: yes
-
-- name: Ensure flask-app service is enabled
-  ansible.builtin.systemd:
-    name: flask-app
-    enabled: yes
-
-- name: Ensure flask-app service is running
-  ansible.builtin.systemd:
-    name: flask-app
-    state: started
-
-- name: Wait for Flask app to respond on port 5000
-  ansible.builtin.wait_for:
-    host: "{{ ansible_host | default(inventory_hostname) }}"
-    port: 5000
-    timeout: 30
-
-- name: Verify Flask app response
-  ansible.builtin.uri:
-    url: "http://{{ ansible_host | default(inventory_hostname) }}:5000"
-    return_content: yes
-  register: flask_response
-
-- name: Debug Flask app output
-  debug:
-    msg: "{{ flask_response.content }}"
