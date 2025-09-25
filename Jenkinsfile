@@ -73,14 +73,21 @@ pipeline {
             }
         }
 
-        stage('Deploy via Ansible') {
-            steps {
-                sh '''
-                    ansible-playbook -i ${INVENTORY} ${PLAYBOOK}
-                '''
-            }
-        }
+       stage('Deploy via Ansible') {
+     steps {
+        sh '''
+            # Activate virtualenv if needed
+            source venv/bin/activate
+
+            # Run the Ansible playbook using your dynamic inventory
+            ansible-playbook \
+                -i my_inventory.aws_ec2.yml \
+                flaskapp_deploy.yml \
+                --limit tag_Role_FlaskApp \
+                --extra-vars "s3_bucket=aj-flaskapp-bucket"
+        '''
     }
+}
 
     post {
         always {
