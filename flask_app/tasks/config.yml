@@ -22,6 +22,7 @@
   copy:
     src: templates/index.html
     dest: "{{ app_dir }}/templates/index.html"
+    mode: '0644'
 
 - name: Copy init_db.sql
   copy:
