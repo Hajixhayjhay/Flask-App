@@ -1,4 +1,3 @@
-# --- Set build ID ---
 - name: Set build_id if not defined
   set_fact:
     build_id: "{{ build_id | default('latest') }}"
@@ -28,8 +27,8 @@
     msg: "Artifact /tmp/{{ artifact_name }} not found!"
   when: not artifact_stat.stat.exists
 
-# --- Directories and releases ---
-- name: Ensure app base directories exist
+# --- Ensure app directories exist ---
+- name: Ensure base directories exist
   file:
     path: "{{ item }}"
     state: directory
@@ -42,18 +41,11 @@
     - "{{ app_dir }}/instance"
     - "/var/log/flaskapp"
 
-- name: Clean old release if it exists
+# --- Prepare release ---
+- name: Clean old release directory if exists
   file:
     path: "{{ app_dir }}/releases/{{ build_id }}"
     state: absent
-
-- name: Recreate release directory
-  file:
-    path: "{{ app_dir }}/releases/{{ build_id }}"
-    state: directory
-    owner: "{{ flask_user }}"
-    group: "{{ flask_user }}"
-    mode: '0755'
 
 - name: Clean old current symlink if exists
   file:
@@ -61,10 +53,6 @@
     state: absent
 
 # --- Extract artifact ---
-- name: Debug release directory
-  debug:
-    msg: "Extracting artifact into {{ app_dir }}/releases/{{ build_id }}"
-
 - name: Extract artifact into release directory
   unarchive:
     src: "/tmp/{{ artifact_name }}"
@@ -75,6 +63,8 @@
     mode: '0755'
     extra_opts:
       - --strip-components=1
+  args:
+    creates: "{{ app_dir }}/releases/{{ build_id }}"
 
 - name: Update current symlink to latest release
   file:
@@ -82,7 +72,7 @@
     dest: "{{ app_dir }}/current"
     state: link
 
-# --- Virtualenv and dependencies ---
+# --- Virtualenv & dependencies ---
 - name: Create virtualenv if missing
   ansible.builtin.command:
     cmd: python3 -m venv "{{ venv_dir }}"
@@ -95,7 +85,7 @@
     virtualenv: "{{ venv_dir }}"
     virtualenv_python: python3
 
-# --- Restart service ---
+# --- Restart Flask service ---
 - name: Restart Flask app service
   ansible.builtin.systemd:
     name: flaskapp
