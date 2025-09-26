@@ -1,3 +1,5 @@
+# ================== Flask App Deployment ==================
+
 # --- Show deployment variables for debugging ---
 - name: Show deployment variables
   debug:
@@ -85,16 +87,27 @@
     state: link
     force: yes
 
-# --- Install Python dependencies ---
-- name: Install Python dependencies in virtualenv
-  ansible.builtin.pip:
+# --- Deploy Flask templates ---
+- name: Deploy Flask templates
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ app_dir }}/current/{{ item.dest }}"
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0644'
+  loop:
+    - { src: "files/templates/index.html.j2", dest: "files/templates/index.html" }
+
+# --- Install Python dependencies in virtualenv ---
+- name: Install Python dependencies
+  pip:
     requirements: "{{ app_dir }}/current/files/requirements.txt"
     virtualenv: "{{ venv_dir }}"
     virtualenv_python: python3
 
 # --- Restart Flask service ---
 - name: Restart Flask app service
-  ansible.builtin.systemd:
+  systemd:
     name: flaskapp
     state: restarted
     enabled: yes
