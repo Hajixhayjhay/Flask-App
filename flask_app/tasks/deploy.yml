@@ -39,4 +39,75 @@
     name: flaskapp
     state: restarted
     enabled: yes
-    daemon_reload: yes
+    daemon_reload: yes---
+- name: Deploy Flask App
+  hosts: flask_servers
+  become: yes
+  vars:
+    app_dir: /opt/flaskapp
+    artifact: flaskapp.tar.gz
+    flask_user: ec2-user
+    venv_dir: "{{ app_dir }}/current/venv"
+    s3_bucket: aj-flaskapp-bucket
+    region: us-east-1
+
+  tasks:
+
+    - name: Download latest artifact from S3
+      amazon.aws.s3:
+        bucket: "{{ s3_bucket }}"
+        object: "{{ artifact }}"
+        dest: "/tmp/{{ artifact }}"
+        mode: get
+        region: "{{ region }}"
+
+    - name: Ensure current release dir exists
+      file:
+        path: "{{ app_dir }}/current"
+        state: directory
+        owner: "{{ flask_user }}"
+        group: "{{ flask_user }}"
+        mode: '0755'
+
+    - name: Clean old files before deploy
+      file:
+        path: "{{ app_dir }}/current"
+        state: absent
+
+    - name: Recreate current release dir
+      file:
+        path: "{{ app_dir }}/current"
+        state: directory
+        owner: "{{ flask_user }}"
+        group: "{{ flask_user }}"
+        mode: '0755'
+
+    - name: Extract artifact into current release
+      unarchive:
+        src: "/tmp/{{ artifact }}"
+        dest: "{{ app_dir }}/current"
+        remote_src: yes
+        owner: "{{ flask_user }}"
+        group: "{{ flask_user }}"
+        mode: '0755'
+        extra_opts:
+          - --strip-components=1
+
+    - name: Create virtualenv if missing
+      ansible.builtin.command:
+        cmd: python3 -m venv "{{ venv_dir }}"
+      args:
+        creates: "{{ venv_dir }}"
+
+    - name: Install dependencies
+      ansible.builtin.pip:
+        requirements: "{{ app_dir }}/current/files/requirements.txt"
+        virtualenv: "{{ venv_dir }}"
+        virtualenv_python: python3
+
+    - name: Restart Flask app service
+      ansible.builtin.systemd:
+        name: flaskapp
+        state: restarted
+        enabled: yes
+        daemon_reload: yes
