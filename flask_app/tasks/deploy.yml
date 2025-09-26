@@ -27,7 +27,7 @@
     msg: "Artifact /tmp/{{ artifact_name }} not found!"
   when: not artifact_stat.stat.exists
 
-# --- Ensure app directories exist ---
+# --- Ensure base directories exist ---
 - name: Ensure base directories exist
   file:
     path: "{{ item }}"
@@ -86,13 +86,7 @@
     state: link
     force: yes
 
-# --- Virtualenv & dependencies ---
-- name: Create virtualenv if missing
-  ansible.builtin.command:
-    cmd: python3 -m venv "{{ venv_dir }}"
-  args:
-    creates: "{{ venv_dir }}"
-
+# --- Install Python dependencies ---
 - name: Install Python dependencies in virtualenv
   ansible.builtin.pip:
     requirements: "{{ app_dir }}/current/files/requirements.txt"

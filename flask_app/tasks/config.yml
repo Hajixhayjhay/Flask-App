@@ -1,80 +1,24 @@
-- name: Ensure app directories exist
-  file:
-    path: "{{ item }}"
-    state: directory
-    owner: "{{ flask_user }}"
-    group: "{{ flask_user }}"
-    mode: '0755'
-  loop:
-    - "{{ app_dir }}"
-    - "{{ app_dir }}/current"
-    - "{{ app_dir }}/releases"
-    - "{{ app_dir }}/instance"
-    - /var/log/flaskapp
+- name: Ensure Python3 & pip are installed
+  yum:
+    name:
+      - python3
+      - python3-pip
+    state: present
 
-# ---------- Artifact download (if using S3) ----------
-- name: Download artifact from S3
-  amazon.aws.s3_object:
-    bucket: "{{ s3_bucket }}"        # your bucket name
-    object: "{{ artifact }}"         # artifact filename
-    dest: "/opt/flaskapp/releases/{{ artifact }}"  # destination path
-    mode: get
-    region: "us-east-1"        # replace with your region
-  register: s3_download
+- name: Ensure SQLite is installed
+  yum:
+    name: sqlite
+    state: present
 
-
-
-
-- name: Extract artifact
-  unarchive:
-    src: "/tmp/{{ artifact_name }}"
-    dest: "{{ app_dir }}/releases/{{ build_id }}"
-    remote_src: yes
-
-- name: Symlink current release
-  file:
-    src: "{{ app_dir }}/releases/{{ build_id }}"
-    dest: "{{ app_dir }}/current"
-    state: link
-    force: yes
-
-# ---------- Copy requirements if not using artifact ----------
-- name: Copy requirements.txt to current (local deploy)
-  copy:
-    src: requirements.txt
-    dest: "{{ app_dir }}/current/requirements.txt"
-    owner: "{{ flask_user }}"
-    group: "{{ flask_user }}"
-    mode: '0644'
-
-# ---------- Install pip packages ----------
-- name: Install Python requirements
-  pip:
-    requirements: "{{ app_dir }}/current/requirements.txt"
-    virtualenv: "{{ venv_dir }}"
-    virtualenv_python: python3
-
-
-# ---------- Deploy templates ----------
-- name: Deploy Flask HTML template
-  template:
-    src: index.html.j2
-    dest: "{{ app_dir }}/current/templates/index.html"
-    owner: "{{ flask_user }}"
-    group: "{{ flask_user }}"
-    mode: '0644'
-
-# ---------- Initialize SQLite DB ----------
-- name: Initialize SQLite database if not exists
-  shell: sqlite3 "{{ app_dir }}/current/data.db" < "{{ app_dir }}/current/init_db.sql"
+- name: Create Python virtual environment
+  command: python3 -m venv {{ venv_dir }}
   args:
-    creates: "{{ app_dir }}/current/data.db"
-  become_user: "{{ flask_user }}"
+    creates: "{{ venv_dir }}/bin/activate"
 
-# ---------- Deploy systemd service ----------
-- name: Deploy systemd service
-  template:
-    src: flaskapp.service.j2
-    dest: /etc/systemd/system/flaskapp.service
-    mode: '0644'
-  notify: restart flaskapp
+  
+- name: Install boto3 and botocore in virtualenv
+  pip:
+    name:
+      - boto3
+      - botocore
+    virtualenv: "{{ venv_dir }}"

@@ -5,5 +5,5 @@ venv_dir: /opt/flaskapp/venv
 flask_port: 5000
 s3_bucket: aj-flaskapp-bucket
 # flask_app/vars/main.yml
-artifact: flaskapp.tar.gz
+artifact_name: flaskapp.tar.gz
 
