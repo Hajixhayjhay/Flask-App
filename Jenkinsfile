@@ -51,12 +51,17 @@ pipeline {
 
         stage('Build & Upload Artifact') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
-                    sh """
-                        tar -czf ${ARTIFACT} flask_app/
-                        aws s3 cp ${ARTIFACT} s3://${S3_BUCKET}/${ARTIFACT}
-                    """
-                }
+                sh """
+                    # Ensure we’re in the repo root
+                    cd flask_app
+
+                    # Package only the contents, not the parent folder
+                    tar -czf ../${ARTIFACT} *
+
+                    # Go back to repo root and upload
+                    cd ..
+                    aws s3 cp ${ARTIFACT} s3://${S3_BUCKET}/${ARTIFACT}
+                """
             }
         }
 
@@ -64,12 +69,6 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
                     sh '''
-                        # Export AWS credentials for Ansible
-                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                        export AWS_DEFAULT_REGION=us-east-1
-
-                        # Run Ansible playbook
                         ansible-playbook -i my_inventory.aws-ec2.yml flaskapp_deploy.yml
                     '''
                 }

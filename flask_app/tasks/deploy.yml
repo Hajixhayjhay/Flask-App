@@ -1,0 +1,36 @@
+- name: Ensure current release dir exists
+  file:
+    path: /opt/flaskapp/current
+    state: directory
+    owner: ec2-user
+    group: ec2-user
+    mode: '0755'
+
+- name: Clean old files before deploy
+  file:
+    path: /opt/flaskapp/current
+    state: absent
+
+- name: Recreate current release dir
+  file:
+    path: /opt/flaskapp/current
+    state: directory
+    owner: ec2-user
+    group: ec2-user
+    mode: '0755'
+
+- name: Extract artifact into current release
+  unarchive:
+    src: "/tmp/{{ artifact }}"
+    dest: /opt/flaskapp/current
+    remote_src: yes
+    owner: ec2-user
+    group: ec2-user
+    mode: '0755'
+
+- name: Restart Flask app service
+  ansible.builtin.systemd:
+    name: flaskapp
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
