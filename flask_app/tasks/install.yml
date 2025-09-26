@@ -3,6 +3,8 @@
     name:
       - python3
       - python3-pip
+      - unzip
+      - tar
     state: present
 
 - name: Ensure SQLite is installed
