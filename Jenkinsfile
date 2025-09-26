@@ -108,3 +108,13 @@ pipeline {
             mail to: "${RECIPIENT_EMAIL}",
                  from: "${EMAIL_CREDENTIALS}",
                  subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Good news! The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} succeeded."
+        }
+        failure {
+            mail to: "${RECIPIENT_EMAIL}",
+                 from: "${EMAIL_CREDENTIALS}",
+                 subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} failed. Please check the logs."
+        }
+    }
+}
