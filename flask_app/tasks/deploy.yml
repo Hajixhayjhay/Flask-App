@@ -1,77 +1,52 @@
----
-- name: Deploy Flask App
-  hosts: all
-  become: yes
+- name: Set build_id if not defined
+  set_fact:
+    build_id: "{{ (build_id | default('latest')) | string }}"
+
+- name: Debug build_id
+  debug:
+    msg: "Deploying build_id={{ build_id }}"
+
+# --- Download artifact from S3 ---
+- name: Download artifact from S3
+  amazon.aws.s3:
+    bucket: "{{ s3_bucket }}"
+    object: "{{ artifact_name }}"
+    dest: "/tmp/{{ artifact_name }}"
+    mode: get
+    region: us-east-1
   vars:
-    flask_user: ec2-user
-    app_dir: /opt/flaskapp
-    venv_dir: /opt/flaskapp/venv
-    flask_port: 5000
-    s3_bucket: aj-flaskapp-bucket
-    artifact_name: flaskapp.tar.gz
-    build_id: latest
+    ansible_python_interpreter: "{{ venv_dir }}/bin/python3"
 
-  tasks:
-    # --- Set build_id if not defined ---
-    - name: Set build_id if not defined
-      set_fact:
-        build_id: "{{ (build_id | default('latest')) | string }}"
+- name: Fail if artifact was not downloaded
+  stat:
+    path: "/tmp/{{ artifact_name }}"
+  register: artifact_stat
 
-    - name: Debug build_id
-      debug:
-        msg: "Deploying build_id={{ build_id }}"
+- name: Ensure artifact exists
+  fail:
+    msg: "Artifact /tmp/{{ artifact_name }} not found!"
+  when: not artifact_stat.stat.exists
 
-    # --- Download artifact from S3 ---
-    - name: Download artifact from S3
-      amazon.aws.s3:
-        bucket: "{{ s3_bucket }}"
-        object: "{{ artifact_name }}"
-        dest: "/tmp/{{ artifact_name }}"
-        mode: get
-        region: us-east-1
-      vars:
-        ansible_python_interpreter: "{{ venv_dir }}/bin/python3"
-
-    - name: Fail if artifact was not downloaded
-      stat:
-        path: "/tmp/{{ artifact_name }}"
-      register: artifact_stat
-
-    - name: Ensure artifact exists
-      fail:
-        msg: "Artifact /tmp/{{ artifact_name }} not found!"
-      when: not artifact_stat.stat.exists
-
-    # --- Ensure base directories exist ---
-    - name: Ensure base directories exist
-      file:
-        path: "{{ item }}"
-        state: directory
-        owner: "{{ flask_user }}"
-        group: "{{ flask_user }}"
-        mode: '0755'
-      loop:
-        - "{{ app_dir }}"
-        - "{{ app_dir }}/releases"
-        - "{{ app_dir }}/instance"
-        - "/var/log/flaskapp"
-
-    # --- Prepare release ---
-    - name: Clean old release directory if exists
-      file:
-        path: "{{ app_dir }}/releases/{{ build_id }}"
-        state: absent
-    
-    # --- Ensure base directories exist ---
-- name: Ensure releases base directory exists
+# --- Ensure app directories exist ---
+- name: Ensure base directories exist
   file:
-    path: "{{ app_dir }}/releases"
+    path: "{{ item }}"
     state: directory
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     mode: '0755'
+  loop:
+    - "{{ app_dir }}"
+    - "{{ app_dir }}/releases"
+    - "{{ app_dir }}/instance"
+    - "/var/log/flaskapp"
 
-# --- Ensure release directory exists ---
+# --- Prepare release ---
+- name: Clean old release directory if exists
+  file:
+    path: "{{ app_dir }}/releases/{{ build_id }}"
+    state: absent
+
 - name: Ensure release directory exists
   file:
     path: "{{ app_dir }}/releases/{{ build_id }}"
@@ -80,7 +55,6 @@
     group: "{{ flask_user }}"
     mode: '0755'
 
-# --- Clean old current symlink if exists ---
 - name: Clean old current symlink if exists
   file:
     path: "{{ app_dir }}/current"
@@ -88,7 +62,7 @@
 
 # --- Extract artifact ---
 - name: Extract artifact into release directory
-  ansible.builtin.unarchive:
+  unarchive:
     src: "/tmp/{{ artifact_name }}"
     dest: "{{ app_dir }}/releases/{{ build_id }}"
     remote_src: yes
@@ -97,11 +71,38 @@
     mode: '0755'
     extra_opts:
       - --strip-components=1
-    # Prevent re-extracting if already done
+  args:
     creates: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
 
-# --- Mark extraction done ---
 - name: Touch extracted marker
   file:
     path: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
     state: touch
+
+- name: Update current symlink to latest release
+  file:
+    src: "{{ app_dir }}/releases/{{ build_id }}"
+    dest: "{{ app_dir }}/current"
+    state: link
+    force: yes
+
+# --- Virtualenv & dependencies ---
+- name: Create virtualenv if missing
+  ansible.builtin.command:
+    cmd: python3 -m venv "{{ venv_dir }}"
+  args:
+    creates: "{{ venv_dir }}"
+
+- name: Install Python dependencies in virtualenv
+  ansible.builtin.pip:
+    requirements: "{{ app_dir }}/current/files/requirements.txt"
+    virtualenv: "{{ venv_dir }}"
+    virtualenv_python: python3
+
+# --- Restart Flask service ---
+- name: Restart Flask app service
+  ansible.builtin.systemd:
+    name: flaskapp
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
