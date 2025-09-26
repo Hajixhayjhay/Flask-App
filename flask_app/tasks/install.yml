@@ -20,3 +20,10 @@
     requirements: "{{ app_dir }}/requirements.txt"
     virtualenv: "{{ venv_dir }}"
     virtualenv_python: python3
+
+- name: Install boto3 and botocore in virtualenv
+  pip:
+    name:
+      - boto3
+      - botocore
+    virtualenv: "{{ venv_dir }}"
