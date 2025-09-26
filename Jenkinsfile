@@ -66,7 +66,7 @@ pipeline {
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
                         sh '''
                             ansible-playbook -i my_inventory.aws_ec2.yml flaskapp_deploy.yml
-                             --extra-vars "artifact=${ARTIFACT} s3_bucket=${S3_BUCKET}"
+                             --extra-vars "artifact_name=${ARTIFACT} s3_bucket=${S3_BUCKET}"
                         '''
                     }
                 }
