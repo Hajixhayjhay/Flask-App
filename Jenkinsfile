@@ -5,7 +5,7 @@ pipeline {
         VENV_DIR = 'venv'
         ARTIFACT = 'flaskapp.tar.gz'
         S3_BUCKET = 'aj-flaskapp-bucket'
-        AWS_REGION = 'us-east-1'  // change to your bucket's region
+        SSH_KEY = 'key_file' // your Jenkins SSH credential ID
     }
 
     stages {
@@ -51,10 +51,10 @@ pipeline {
 
         stage('Build & Upload Artifact') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'your-aws-cred-id']]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
                     sh """
                         tar -czf ${ARTIFACT} flask_app/
-                        aws s3 cp ${ARTIFACT} s3://${S3_BUCKET}/${ARTIFACT} --region ${AWS_REGION}
+                        aws s3 cp ${ARTIFACT} s3://${S3_BUCKET}/${ARTIFACT}
                     """
                 }
             }
@@ -62,14 +62,16 @@ pipeline {
 
         stage('Deploy via Ansible') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'your-aws-cred-id']]) {
-                    sh """
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
+                    sh '''
+                        # Export AWS credentials for Ansible
                         export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
                         export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                        export AWS_DEFAULT_REGION=${AWS_REGION}
+                        export AWS_DEFAULT_REGION=us-east-1
 
+                        # Run Ansible playbook
                         ansible-playbook -i inventory flask_app_deploy.yml
-                    """
+                    '''
                 }
             }
         }
