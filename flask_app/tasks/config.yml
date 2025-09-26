@@ -110,7 +110,7 @@
 # --- Install Python dependencies in virtualenv ---
 - name: Install Python dependencies
   ansible.builtin.pip:
-    requirements: "{{ app_dir }}/current/files/requirements.txt"
+    requirements: "{{ app_dir }}/current/requirements.txt"
     virtualenv: "{{ venv_dir }}"
     virtualenv_python: python3
 
