@@ -69,7 +69,8 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
                     sh '''
-                        ansible-playbook -i my_inventory.aws-ec2.yml flaskapp_deploy.yml
+                        ansible-playbook -i my_inventory.aws_ec2.yml flaskapp_deploy.yml
+
                     '''
                 }
             }
