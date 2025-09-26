@@ -4,3 +4,5 @@
   become: yes
   roles:
     - flask_app
+  vars:
+    ansible_python_interpreter: "{{ venv_dir }}/bin/python3"
