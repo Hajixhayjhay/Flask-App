@@ -16,6 +16,7 @@
     creates: "{{ venv_dir }}/bin/activate"
 
 - name: Install Python requirements
-  pip:
-    requirements: "{{ app_dir }}/current/requirements.txt"
+  ansible.builtin.pip:
+    requirements: "{{ app_dir }}/requirements.txt"
     virtualenv: "{{ venv_dir }}"
+    virtualenv_python: python3
