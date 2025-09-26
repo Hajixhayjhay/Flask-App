@@ -3,5 +3,5 @@ app_dir: /opt/flaskapp
 venv_dir: /opt/flaskapp/venv
 flask_port: 5000
 s3_bucket: aj-flaskapp-bucket
-artifact_name: build-latest.tar.gz
+artifact_name: flaskapp.tar.gz
 build_id: latest
