@@ -1,0 +1,15 @@
+[Unit]
+Description=Flask App
+After=network.target
+
+[Service]
+User={{ flask_user }}
+Group={{ flask_user }}
+WorkingDirectory={{ app_dir }}/current
+Environment="PATH={{ venv_dir }}/bin"
+ExecStart={{ venv_dir }}/bin/python3 {{ app_dir }}/current/app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

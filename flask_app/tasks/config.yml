@@ -1,88 +1,53 @@
-# tasks/main.yml
-
-- name: Ensure app directory exists
+- name: Ensure app directories exist
   file:
-    path: "{{ app_dir }}"
+    path: "{{ item }}"
     state: directory
     mode: '0755'
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
+  loop:
+    - "{{ app_dir }}"
+    - "{{ app_dir }}/releases"
+    - "{{ app_dir }}/instance"
+    - /var/log/flaskapp
 
-- name: Ensure templates directory exists
+- name: Download artifact from S3
+  aws_s3:
+    bucket: "{{ s3_bucket }}"
+    object: "{{ artifact_name }}"
+    dest: "/tmp/{{ artifact_name }}"
+    mode: get
+
+- name: Extract artifact
+  unarchive:
+    src: "/tmp/{{ artifact_name }}"
+    dest: "{{ app_dir }}/releases/{{ build_id }}"
+    remote_src: yes
+
+- name: Symlink current release
   file:
-    path: "{{ app_dir }}/templates"
-    state: directory
-    mode: '0755'
-    owner: "{{ flask_user }}"
-    group: "{{ flask_user }}"
+    src: "{{ app_dir }}/releases/{{ build_id }}"
+    dest: "{{ app_dir }}/current"
+    state: link
+    force: yes
 
-- name: Copy Flask app files
-  copy:
-    src: app.py
-    dest: "{{ app_dir }}/app.py"
-    mode: '0755'
-    owner: "{{ flask_user }}"
-    group: "{{ flask_user }}"
-
-- name: Deploy Jinja2 template for Flask
+- name: Deploy Flask HTML template
   template:
     src: index.html.j2
-    dest: "{{ app_dir }}/templates/index.html"
-    mode: '0644'
+    dest: "{{ app_dir }}/current/templates/index.html"
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
-
-
-- name: Copy init_db.sql
-  copy:
-    src: init_db.sql
-    dest: "{{ app_dir }}/init_db.sql"
     mode: '0644'
-    owner: "{{ flask_user }}"
-    group: "{{ flask_user }}"
 
-- name: Initialize SQLite database if not exists
-  shell: sqlite3 "{{ app_dir }}/data.db" < "{{ app_dir }}/init_db.sql"
+- name: Initialize SQLite database
+  shell: sqlite3 "{{ app_dir }}/current/data.db" < "{{ app_dir }}/current/init_db.sql"
   args:
-    creates: "{{ app_dir }}/data.db"
+    creates: "{{ app_dir }}/current/data.db"
+  become_user: "{{ flask_user }}"
 
-- name: Copy requirements.txt
-  copy:
-    src: requirements.txt
-    dest: "{{ app_dir }}/requirements.txt"
+- name: Deploy systemd service
+  template:
+    src: flaskapp.service.j2
+    dest: /etc/systemd/system/flaskapp.service
     mode: '0644'
-    owner: "{{ flask_user }}"
-    group: "{{ flask_user }}"
-
-- name: Install Python virtual environment
-  pip:
-    requirements: "{{ app_dir }}/requirements.txt"
-    executable: pip3
-
-- name: Create systemd service for Flask app
-  copy:
-    dest: /etc/systemd/system/flask-app.service
-    content: |
-      [Unit]
-      Description=Flask App
-      After=network.target
-
-      [Service]
-      User={{ flask_user }}
-      WorkingDirectory={{ app_dir }}
-      ExecStart=/usr/bin/python3 {{ app_dir }}/app.py
-      Restart=always
-
-      [Install]
-      WantedBy=multi-user.target
-    mode: '0644'
-
-- name: Reload systemd daemon
-  systemd:
-    daemon_reload: yes
-
-- name: Enable and start Flask app
-  systemd:
-    name: flask-app
-    state: started
-    enabled: yes
+  notify: restart flaskapp

@@ -1,2 +1,6 @@
----
-# handlers file for flask_app
+- name: restart flaskapp
+  systemd:
+    name: flaskapp
+    state: restarted
+    enabled: yes
+    daemon_reload: yes

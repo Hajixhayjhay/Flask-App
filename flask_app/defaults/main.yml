@@ -1,6 +1,7 @@
-#
-# Default variables for flask_app role
-app_dir: /opt/flask-app
-flask_user: ec2-user
+flask_user: flaskuser
+app_dir: /opt/flaskapp
+venv_dir: /opt/flaskapp/venv
 flask_port: 5000
-venv_dir: "{{ app_dir }}/venv"
+s3_bucket: aj-flaskapp-bucket
+artifact_name: build-latest.tar.gz
+build_id: latest
