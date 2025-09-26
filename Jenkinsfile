@@ -6,12 +6,16 @@ pipeline {
         ARTIFACT = 'flaskapp.tar.gz'
         S3_BUCKET = 'aj-flaskapp-bucket'
         SSH_KEY = 'key_file' // your Jenkins SSH credential ID
+        SONARQUBE_ENV = 'Sonar_url' // your SonarQube installation name
+        SONAR_TOKEN = 'SonarQube'   // your SonarQube PAT credential ID
     }
 
     stages {
         stage('Checkout SCM') {
             steps {
-                checkout scm
+                git branch: 'dev',
+                    url: 'https://github.com/Hajixhayjhay/Flask-App.git',
+                    credentialsId: "${GIT_CREDENTIALS}"
             }
         }
 
@@ -51,8 +55,10 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('Sonar_url') {
-                    sh "sonar-scanner -Dsonar.projectKey=FlaskApp -Dsonar.sources=flask_app"
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    withCredentials([string(credentialsId: "${SONAR_TOKEN}", variable: 'SONAR_TOKEN')]) {
+                        sh "/usr/share/maven/bin/mvn sonar:sonar -Dsonar.token=$SONAR_TOKEN"
+                    }
                 }
             }
         }
