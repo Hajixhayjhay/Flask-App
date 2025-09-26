@@ -1,3 +1,11 @@
+- name: Set build_id if not defined
+  set_fact:
+    build_id: "{{ build_id | default('latest') }}"
+
+- name: Debug build_id
+  debug:
+    msg: "Deploying build_id={{ build_id }}"
+
 - name: Download artifact from S3
   amazon.aws.s3:
     bucket: "{{ s3_bucket }}"
@@ -7,6 +15,16 @@
     region: us-east-1
   vars:
     ansible_python_interpreter: "{{ venv_dir }}/bin/python3"
+
+- name: Fail if artifact was not downloaded
+  stat:
+    path: "/tmp/{{ artifact_name }}"
+  register: artifact_stat
+
+- name: Ensure artifact exists
+  fail:
+    msg: "Artifact /tmp/{{ artifact_name }} not found!"
+  when: not artifact_stat.stat.exists
 
 - name: Clean old current symlink or directory
   file:
@@ -21,7 +39,12 @@
     group: "{{ flask_user }}"
     mode: '0755'
 
-- name: Ensure current release directory exists
+- name: Clean release directory if it exists
+  file:
+    path: "{{ app_dir }}/releases/{{ build_id }}"
+    state: absent
+
+- name: Recreate release directory
   file:
     path: "{{ app_dir }}/releases/{{ build_id }}"
     state: directory
