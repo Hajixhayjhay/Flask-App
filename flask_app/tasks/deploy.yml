@@ -1,3 +1,4 @@
+# --- Set build ID ---
 - name: Set build_id if not defined
   set_fact:
     build_id: "{{ build_id | default('latest') }}"
@@ -6,6 +7,7 @@
   debug:
     msg: "Deploying build_id={{ build_id }}"
 
+# --- Download artifact from S3 ---
 - name: Download artifact from S3
   amazon.aws.s3:
     bucket: "{{ s3_bucket }}"
@@ -39,13 +41,11 @@
     - "{{ app_dir }}/releases"
     - "{{ app_dir }}/instance"
     - "/var/log/flaskapp"
-  
 
-- name: Clean old release if exists
+- name: Clean old release if it exists
   file:
     path: "{{ app_dir }}/releases/{{ build_id }}"
     state: absent
-
 
 - name: Recreate release directory
   file:
@@ -54,15 +54,17 @@
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     mode: '0755'
-  
 
 - name: Clean old current symlink if exists
   file:
     path: "{{ app_dir }}/current"
     state: absent
-  
 
 # --- Extract artifact ---
+- name: Debug release directory
+  debug:
+    msg: "Extracting artifact into {{ app_dir }}/releases/{{ build_id }}"
+
 - name: Extract artifact into release directory
   unarchive:
     src: "/tmp/{{ artifact_name }}"
@@ -73,14 +75,12 @@
     mode: '0755'
     extra_opts:
       - --strip-components=1
-  
 
 - name: Update current symlink to latest release
   file:
     src: "{{ app_dir }}/releases/{{ build_id }}"
     dest: "{{ app_dir }}/current"
     state: link
-  
 
 # --- Virtualenv and dependencies ---
 - name: Create virtualenv if missing
@@ -88,14 +88,12 @@
     cmd: python3 -m venv "{{ venv_dir }}"
   args:
     creates: "{{ venv_dir }}"
-  
 
 - name: Install Python dependencies in virtualenv
   ansible.builtin.pip:
     requirements: "{{ app_dir }}/current/files/requirements.txt"
     virtualenv: "{{ venv_dir }}"
     virtualenv_python: python3
-  
 
 # --- Restart service ---
 - name: Restart Flask app service
@@ -104,4 +102,3 @@
     state: restarted
     enabled: yes
     daemon_reload: yes
-  
