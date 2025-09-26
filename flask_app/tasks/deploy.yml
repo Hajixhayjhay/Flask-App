@@ -26,23 +26,26 @@
     msg: "Artifact /tmp/{{ artifact_name }} not found!"
   when: not artifact_stat.stat.exists
 
-- name: Clean old current symlink or directory
+# --- Directories and releases ---
+- name: Ensure app base directories exist
   file:
-    path: "{{ app_dir }}/current"
-    state: absent
-
-- name: Ensure releases parent directory exists
-  file:
-    path: "{{ app_dir }}/releases"
+    path: "{{ item }}"
     state: directory
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     mode: '0755'
+  loop:
+    - "{{ app_dir }}"
+    - "{{ app_dir }}/releases"
+    - "{{ app_dir }}/instance"
+    - "/var/log/flaskapp"
+  become: yes
 
-- name: Clean release directory if it exists
+- name: Clean old release if exists
   file:
     path: "{{ app_dir }}/releases/{{ build_id }}"
     state: absent
+  become: yes
 
 - name: Recreate release directory
   file:
@@ -51,7 +54,15 @@
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     mode: '0755'
+  become: yes
 
+- name: Clean old current symlink if exists
+  file:
+    path: "{{ app_dir }}/current"
+    state: absent
+  become: yes
+
+# --- Extract artifact ---
 - name: Extract artifact into release directory
   unarchive:
     src: "/tmp/{{ artifact_name }}"
@@ -62,28 +73,35 @@
     mode: '0755'
     extra_opts:
       - --strip-components=1
+  become: yes
 
 - name: Update current symlink to latest release
   file:
     src: "{{ app_dir }}/releases/{{ build_id }}"
     dest: "{{ app_dir }}/current"
     state: link
+  become: yes
 
+# --- Virtualenv and dependencies ---
 - name: Create virtualenv if missing
   ansible.builtin.command:
     cmd: python3 -m venv "{{ venv_dir }}"
   args:
     creates: "{{ venv_dir }}"
+  become: yes
 
 - name: Install Python dependencies in virtualenv
   ansible.builtin.pip:
     requirements: "{{ app_dir }}/current/files/requirements.txt"
     virtualenv: "{{ venv_dir }}"
     virtualenv_python: python3
+  become: yes
 
+# --- Restart service ---
 - name: Restart Flask app service
   ansible.builtin.systemd:
     name: flaskapp
     state: restarted
     enabled: yes
     daemon_reload: yes
+  become: yes
