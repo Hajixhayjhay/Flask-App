@@ -5,7 +5,7 @@ pipeline {
         VENV_DIR = 'venv'
         ARTIFACT = 'flaskapp.tar.gz'
         S3_BUCKET = 'aj-flaskapp-bucket'
-        SSH_KEY = 'key_file' // your Jenkins SSH credential ID
+        AWS_REGION = 'us-east-1'  // change to your bucket's region
     }
 
     stages {
@@ -51,33 +51,29 @@ pipeline {
 
         stage('Build & Upload Artifact') {
             steps {
-                sh """
-                    tar -czf ${ARTIFACT} flask_app/
-                    aws s3 cp ${ARTIFACT} s3://${S3_BUCKET}/${ARTIFACT}
-                """
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'your-aws-cred-id']]) {
+                    sh """
+                        tar -czf ${ARTIFACT} flask_app/
+                        aws s3 cp ${ARTIFACT} s3://${S3_BUCKET}/${ARTIFACT} --region ${AWS_REGION}
+                    """
+                }
             }
         }
 
         stage('Deploy via Ansible') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
-                                  credentialsId: 'your-aws-cred-id']]) {
-                    sh '''
-                    # Export AWS credentials for Ansible
-                    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'your-aws-cred-id']]) {
+                    sh """
+                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                        export AWS_DEFAULT_REGION=${AWS_REGION}
 
-                    # Optional: specify AWS region
-                    export AWS_DEFAULT_REGION=us-east-1
-
-                    # Run your Ansible playbook
-                    ansible-playbook -i inventory flask_app_deploy.yml
-                    '''
+                        ansible-playbook -i inventory flask_app_deploy.yml
+                    """
                 }
             }
         }
     }
-}
 
     post {
         always {
