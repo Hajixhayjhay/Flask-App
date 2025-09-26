@@ -2,15 +2,17 @@
   file:
     path: "{{ item }}"
     state: directory
-    mode: '0755'
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
+    mode: '0755'
   loop:
     - "{{ app_dir }}"
+    - "{{ app_dir }}/current"
     - "{{ app_dir }}/releases"
     - "{{ app_dir }}/instance"
     - /var/log/flaskapp
 
+# ---------- Artifact download (if using S3) ----------
 - name: Download artifact from S3
   aws_s3:
     bucket: "{{ s3_bucket }}"
@@ -31,6 +33,30 @@
     state: link
     force: yes
 
+# ---------- Copy requirements if not using artifact ----------
+- name: Copy requirements.txt to current (local deploy)
+  copy:
+    src: requirements.txt
+    dest: "{{ app_dir }}/current/requirements.txt"
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0644'
+
+# ---------- Install pip packages ----------
+- name: Install Python requirements
+  pip:
+    requirements: "{{ app_dir }}/current/requirements.txt"
+    virtualenv: "{{ venv_dir }}"
+    virtualenv_python: python3
+
+- name: Install boto3 and botocore in virtualenv
+  pip:
+    name:
+      - boto3
+      - botocore
+    virtualenv: "{{ venv_dir }}"
+
+# ---------- Deploy templates ----------
 - name: Deploy Flask HTML template
   template:
     src: index.html.j2
@@ -39,12 +65,14 @@
     group: "{{ flask_user }}"
     mode: '0644'
 
-- name: Initialize SQLite database
+# ---------- Initialize SQLite DB ----------
+- name: Initialize SQLite database if not exists
   shell: sqlite3 "{{ app_dir }}/current/data.db" < "{{ app_dir }}/current/init_db.sql"
   args:
     creates: "{{ app_dir }}/current/data.db"
   become_user: "{{ flask_user }}"
 
+# ---------- Deploy systemd service ----------
 - name: Deploy systemd service
   template:
     src: flaskapp.service.j2
