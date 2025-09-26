@@ -4,13 +4,13 @@ pipeline {
     environment {
         VENV_DIR = 'venv'
         ARTIFACT = 'flaskapp.tar.gz'
-        S3_BUCKET = 'aws_s3_bucket'               // Jenkins AWS credential ID
-        SSH_KEY = 'key_file'                       // Jenkins SSH credential ID
-        SONAR_TOKEN = credentials('SonarQube')    // SonarQube token
-        SONAR_URL = credentials('Sonar_url')      // SonarQube URL
-        GIT_CREDENTIALS = 'github_credentials'    // GitHub credential ID
-        EMAIL_CREDENTIALS = credentials('email-credentials')   // Email credentials
-        RECIPIENT_EMAIL = credentials('recipient-email')       // Recipient email
+        S3_BUCKET = 'aws_s3_bucket'
+        SSH_KEY = 'key_file'
+        SONAR_TOKEN = credentials('SonarQube')
+        SONAR_URL = credentials('Sonar_url')
+        GIT_CREDENTIALS = 'github_credentials'
+        EMAIL_CREDENTIALS = credentials('email-credentials')
+        RECIPIENT_EMAIL = credentials('recipient-email')
     }
 
     stages {
@@ -41,9 +41,7 @@ pipeline {
 
         stage('Initialize DB') {
             steps {
-                sh """
-                    sqlite3 flask_app/files/data.db < flask_app/files/init_db.sql
-                """
+                sh "sqlite3 flask_app/files/data.db < flask_app/files/init_db.sql"
             }
         }
 
@@ -102,32 +100,11 @@ pipeline {
 
     post {
         always {
-            node {
-                archiveArtifacts artifacts: 'test-reports/*, coverage.xml', allowEmptyArchive: true
-                junit 'test-reports/results.xml'
-                cleanWs()
-            }
+            archiveArtifacts artifacts: 'test-reports/*, coverage.xml', allowEmptyArchive: true
+            junit 'test-reports/results.xml'
+            cleanWs()
         }
         success {
-            node {
-                mail to: "${RECIPIENT_EMAIL_USR}",
-                     from: "${EMAIL_CREDENTIALS_USR}",
-                     subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                     body: "Good news! The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} succeeded."
-            }
-        }
-        failure {
-            node {
-                mail to: "${RECIPIENT_EMAIL_USR}",
-                     from: "${EMAIL_CREDENTIALS_USR}",
-                     subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                     body: "The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} failed. Please check the logs."
-            }
-        }
-        cleanup {
-            node {
-                cleanWs()
-            }
-        }
-    }
-}
+            mail to: "${RECIPIENT_EMAIL}",
+                 from: "${EMAIL_CREDENTIALS}",
+                 subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
