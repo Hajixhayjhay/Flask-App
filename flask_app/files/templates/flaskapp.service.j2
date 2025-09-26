@@ -3,11 +3,11 @@ Description=Flask App
 After=network.target
 
 [Service]
-User={{ flask_user }}
-Group={{ flask_user }}
-WorkingDirectory={{ app_dir }}/current
-Environment="PATH={{ venv_dir }}/bin"
-ExecStart={{ venv_dir }}/bin/python3 {{ app_dir }}/current/app.py
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/opt/flaskapp/current
+Environment="PATH=/opt/flaskapp/current/venv/bin"
+ExecStart=/opt/flaskapp/current/venv/bin/python3 /opt/flaskapp/current/app.py
 Restart=always
 RestartSec=5
 
