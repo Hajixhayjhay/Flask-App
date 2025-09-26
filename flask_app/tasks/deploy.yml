@@ -1,4 +1,13 @@
-# Deploy Flask App
+# --- Show deployment variables for debugging ---
+- name: Show deployment variables
+  debug:
+    msg:
+      - "app_dir={{ app_dir }}"
+      - "build_id={{ build_id }}"
+      - "flask_user={{ flask_user }}"
+      - "venv_dir={{ venv_dir }}"
+      - "s3_bucket={{ s3_bucket }}"
+      - "artifact_name={{ artifact_name }}"
 
 # --- Ensure base directories exist ---
 - name: Ensure base directories exist
@@ -13,6 +22,15 @@
     - "{{ app_dir }}/releases"
     - "{{ app_dir }}/instance"
     - "/var/log/flaskapp"
+
+# --- Ensure release folder exists ---
+- name: Ensure release folder exists
+  file:
+    path: "{{ app_dir }}/releases/{{ build_id }}"
+    state: directory
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0755'
 
 # --- Remove old current symlink if exists ---
 - name: Remove old current symlink if exists
@@ -31,6 +49,7 @@
   vars:
     ansible_python_interpreter: "{{ venv_dir }}/bin/python3"
 
+# --- Fail if artifact was not downloaded ---
 - name: Fail if artifact was not downloaded
   stat:
     path: "/tmp/{{ artifact_name }}"
@@ -41,36 +60,27 @@
     msg: "Artifact /tmp/{{ artifact_name }} not found!"
   when: not artifact_stat.stat.exists
 
-# --- Ensure fixed release folder exists ---
-- name: Ensure release folder exists
-  file:
-    path: "{{ app_dir }}/releases/latest"
-    state: directory
-    owner: "{{ flask_user }}"
-    group: "{{ flask_user }}"
-    mode: '0755'
-
-# --- Extract artifact into the fixed directory ---
+# --- Extract artifact into release folder ---
 - name: Extract artifact
   unarchive:
     src: "/tmp/{{ artifact_name }}"
-    dest: "{{ app_dir }}/releases/latest"
+    dest: "{{ app_dir }}/releases/{{ build_id }}"
     remote_src: yes
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     extra_opts:
       - --strip-components=1
 
-# --- Touch extracted marker for idempotency ---
+# --- Touch extracted marker ---
 - name: Touch extracted marker
   file:
-    path: "{{ app_dir }}/releases/latest/.extracted"
+    path: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
     state: touch
 
 # --- Update current symlink ---
 - name: Update current symlink
   file:
-    src: "{{ app_dir }}/releases/latest"
+    src: "{{ app_dir }}/releases/{{ build_id }}"
     dest: "{{ app_dir }}/current"
     state: link
     force: yes

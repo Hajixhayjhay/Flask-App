@@ -5,3 +5,4 @@ flask_port: 5000
 s3_bucket: aj-flaskapp-bucket
 artifact_name: flaskapp.tar.gz
 build_id: latest
+ansible_python_interpreter: "{{ venv_dir }}/bin/python3"
