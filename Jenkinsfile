@@ -4,10 +4,10 @@ pipeline {
     environment {
         VENV_DIR = 'venv'
         ARTIFACT = 'flaskapp.tar.gz'
-        S3_BUCKET = 'aws_s3_bucket'           // Your Jenkins AWS credential ID for S3
-        SSH_KEY = 'key_file'                   // Jenkins SSH credential ID
-        SONAR_TOKEN = credentials('SonarQube') // SonarQube token
-        SONAR_URL = credentials('Sonar_url')  // SonarQube URL
+        S3_BUCKET = 'aws_s3_bucket'             // Jenkins AWS credential ID for S3
+        SSH_KEY = 'key_file'                     // Jenkins SSH credential ID
+        SONAR_TOKEN = credentials('SonarQube')   // SonarQube token
+        SONAR_URL = credentials('Sonar_url')     // SonarQube URL
         EMAIL_CREDENTIALS = credentials('email-credentials')
         RECIPIENT_EMAIL = credentials('recipient-email')
     }
@@ -15,7 +15,9 @@ pipeline {
     stages {
         stage('Checkout SCM') {
             steps {
-                checkout scm
+                git branch: 'main',
+                    credentialsId: 'github_credentials',
+                    url: 'https://github.com/Hajixhayjhay/Flask-App.git'
             }
         }
 
@@ -100,13 +102,13 @@ pipeline {
         success {
             mail to: "${RECIPIENT_EMAIL}",
                  from: "${EMAIL_CREDENTIALS_USR}",
-                 subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                 body: "Good news! The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} succeeded."
+                 subject: "✅ Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Good news! The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} succeeded. 🎉"
         }
         failure {
             mail to: "${RECIPIENT_EMAIL}",
                  from: "${EMAIL_CREDENTIALS_USR}",
-                 subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 subject: "❌ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                  body: "The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} failed. Please check the logs."
         }
         cleanup {
