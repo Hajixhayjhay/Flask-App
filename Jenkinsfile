@@ -70,7 +70,7 @@ pipeline {
                         export AWS_DEFAULT_REGION=us-east-1
 
                         # Run Ansible playbook
-                        ansible-playbook -i inventory flask_app_deploy.yml
+                        ansible-playbook -i my_inventory.aws-ec2.yml flask_app_deploy.yml
                     '''
                 }
             }
