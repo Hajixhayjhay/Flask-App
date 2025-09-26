@@ -14,3 +14,11 @@
   command: python3 -m venv {{ venv_dir }}
   args:
     creates: "{{ venv_dir }}/bin/activate"
+
+  
+- name: Install boto3 and botocore in virtualenv
+  pip:
+    name:
+      - boto3
+      - botocore
+    virtualenv: "{{ venv_dir }}"

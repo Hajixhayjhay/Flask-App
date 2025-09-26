@@ -49,12 +49,6 @@
     virtualenv: "{{ venv_dir }}"
     virtualenv_python: python3
 
-- name: Install boto3 and botocore in virtualenv
-  pip:
-    name:
-      - boto3
-      - botocore
-    virtualenv: "{{ venv_dir }}"
 
 # ---------- Deploy templates ----------
 - name: Deploy Flask HTML template
