@@ -98,6 +98,15 @@
   loop:
     - { src: "files/templates/index.html.j2", dest: "index.html" }
 
+# --- Copy requirements.txt ---
+- name: Copy requirements.txt
+  copy:
+    src: files/requirements.txt
+    dest: "{{ app_dir }}/current/requirements.txt"
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0644'
+
 # --- Install Python dependencies in virtualenv ---
 - name: Install Python dependencies
   ansible.builtin.pip:
