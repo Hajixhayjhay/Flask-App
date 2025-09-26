@@ -6,4 +6,4 @@
     - flask_app
   vars:
     ansible_python_interpreter: "{{ venv_dir }}/bin/python3"
-    build_id: latest
+    build_id: "{{ build_id | default('latest') }}"
