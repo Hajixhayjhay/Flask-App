@@ -121,6 +121,16 @@
     creates: "{{ app_dir }}/current/data.db"
   become_user: "{{ flask_user }}"
 
+
+# --- Deploy Flask systemd service ---
+- name: Deploy Flask systemd service
+  template:
+    src: flaskapp.service.j2   # your template
+    dest: /etc/systemd/system/flaskapp.service
+    owner: root
+    group: root
+    mode: '0644'
+
 # --- Restart Flask service ---
 - name: Restart Flask app service
   ansible.builtin.systemd:
