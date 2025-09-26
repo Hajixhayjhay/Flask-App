@@ -120,15 +120,14 @@
   args:
     creates: "{{ app_dir }}/current/data.db"
   become_user: "{{ flask_user }}"
-
+# Deploy Flask systemd service
 - name: Deploy Flask systemd service
-  copy:
-    src: flaskapp.service.j2
+  template:
+    src: ../templates/flaskapp.service.j2   # updated path to your templates folder
     dest: /etc/systemd/system/flaskapp.service
     owner: root
     group: root
     mode: '0644'
-
 
 # --- Restart Flask service ---
 - name: Restart Flask app service
