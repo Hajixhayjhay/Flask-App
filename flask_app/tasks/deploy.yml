@@ -61,12 +61,15 @@
 
 # --- Extract artifact ---
 - name: Extract artifact into release directory
-  ansible.builtin.unarchive:
+  unarchive:
     src: "/tmp/{{ artifact_name }}"
-    dest: "{{ app_dir }}/releases/{{ build_id }}/"
+    dest: "{{ app_dir }}/releases/{{ build_id }}"
     remote_src: yes
     extra_opts:
       - --strip-components=1
+  args:
+    creates: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
+
 
 # --- Symlink current release ---
 - name: Update current symlink to latest release
