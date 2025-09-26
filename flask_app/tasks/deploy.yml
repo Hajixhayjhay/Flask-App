@@ -1,4 +1,3 @@
----
 # Deploy Flask App
 
 - name: Set build_id if not defined
@@ -22,6 +21,7 @@
     - "{{ app_dir }}/releases"
     - "{{ app_dir }}/instance"
     - "/var/log/flaskapp"
+  become: yes
 
 # --- Prepare release directory ---
 - name: Ensure release directory exists before extraction
@@ -31,12 +31,14 @@
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     mode: '0755'
+  become: yes
 
 # --- Remove old current symlink if exists ---
 - name: Remove old current symlink if exists
   file:
     path: "{{ app_dir }}/current"
     state: absent
+  become: yes
 
 # --- Download artifact from S3 ---
 - name: Download artifact from S3
@@ -70,12 +72,14 @@
     mode: '0755'
     extra_opts:
       - --strip-components=1
+  become: yes
 
 # --- Optional: Touch extracted marker for idempotency ---
 - name: Touch extracted marker
   file:
     path: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
     state: touch
+  become: yes
 
 # --- Update current symlink ---
 - name: Update current symlink to latest release
@@ -84,6 +88,7 @@
     dest: "{{ app_dir }}/current"
     state: link
     force: yes
+  become: yes
 
 # --- Install Python dependencies ---
 - name: Install Python dependencies in virtualenv
@@ -99,3 +104,4 @@
     state: restarted
     enabled: yes
     daemon_reload: yes
+  become: yes
