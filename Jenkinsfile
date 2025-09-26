@@ -5,7 +5,7 @@ pipeline {
         VENV_DIR = 'venv'
         ARTIFACT = 'flaskapp.tar.gz'
         S3_BUCKET = 'aj-flaskapp-bucket'
-        SSH_KEY = 'key_file' // your Jenkins SSH credential ID
+        SSH_KEY = 'key_file' /* your Jenkins SSH credential ID */
     }
 
     stages {
@@ -52,13 +52,8 @@ pipeline {
         stage('Build & Upload Artifact') {
             steps {
                 sh """
-                    # Ensure we’re in the repo root
                     cd flask_app
-
-                    # Package only the contents, not the parent folder
                     tar -czf ../${ARTIFACT} *
-
-                    # Go back to repo root and upload
                     cd ..
                     aws s3 cp ${ARTIFACT} s3://${S3_BUCKET}/${ARTIFACT}
                 """
@@ -67,11 +62,12 @@ pipeline {
 
         stage('Deploy via Ansible') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
-                    sh '''
-                        ansible-playbook -i my_inventory.aws_ec2.yml flaskapp_deploy.yml
-
-                    '''
+                sshagent([SSH_KEY]) {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
+                        sh '''
+                            ansible-playbook -i my_inventory.aws_ec2.yml flaskapp_deploy.yml
+                        '''
+                    }
                 }
             }
         }
