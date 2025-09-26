@@ -24,7 +24,7 @@
     - "/var/log/flaskapp"
 
 # --- Prepare release directory ---
-- name: Ensure release directory exists
+- name: Ensure release directory exists before extraction
   file:
     path: "{{ app_dir }}/releases/{{ build_id }}"
     state: directory
@@ -65,13 +65,19 @@
     src: "/tmp/{{ artifact_name }}"
     dest: "{{ app_dir }}/releases/{{ build_id }}"
     remote_src: yes
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0755'
     extra_opts:
       - --strip-components=1
-  args:
-    creates: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
 
+# --- Optional: Touch extracted marker for idempotency ---
+- name: Touch extracted marker
+  file:
+    path: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
+    state: touch
 
-# --- Symlink current release ---
+# --- Update current symlink ---
 - name: Update current symlink to latest release
   file:
     src: "{{ app_dir }}/releases/{{ build_id }}"
