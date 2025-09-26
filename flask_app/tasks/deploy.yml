@@ -8,11 +8,19 @@
   vars:
     ansible_python_interpreter: "{{ venv_dir }}/bin/python3"
 
-
-- name: Clean old files before deploy
+- name: Ensure app parent directories exist
   file:
-    path: "{{ app_dir }}/current"
-    state: absent
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0755'
+  loop:
+    - "{{ app_dir }}"
+    - "{{ app_dir }}/releases"
+    - "{{ app_dir }}/current"
+    - "{{ app_dir }}/instance"
+    - "/var/log/flaskapp"
 
 - name: Ensure release directory exists
   file:
@@ -38,7 +46,7 @@
     src: "{{ app_dir }}/releases/{{ build_id }}"
     dest: "{{ app_dir }}/current"
     state: link
-
+    force: yes
 
 - name: Create virtualenv if missing
   ansible.builtin.command:
@@ -46,7 +54,7 @@
   args:
     creates: "{{ venv_dir }}"
 
-- name: Install dependencies
+- name: Install Python dependencies
   ansible.builtin.pip:
     requirements: "{{ app_dir }}/current/files/requirements.txt"
     virtualenv: "{{ venv_dir }}"
