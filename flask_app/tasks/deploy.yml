@@ -61,55 +61,47 @@
       file:
         path: "{{ app_dir }}/releases/{{ build_id }}"
         state: absent
+    
+    # --- Ensure base directories exist ---
+- name: Ensure releases base directory exists
+  file:
+    path: "{{ app_dir }}/releases"
+    state: directory
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0755'
 
-    - name: Ensure release directory exists
-      file:
-        path: "{{ app_dir }}/releases/{{ build_id }}"
-        state: directory
-        owner: "{{ flask_user }}"
-        group: "{{ flask_user }}"
-        mode: '0755'
+# --- Ensure release directory exists ---
+- name: Ensure release directory exists
+  file:
+    path: "{{ app_dir }}/releases/{{ build_id }}"
+    state: directory
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0755'
 
-    - name: Clean old current symlink if exists
-      file:
-        path: "{{ app_dir }}/current"
-        state: absent
+# --- Clean old current symlink if exists ---
+- name: Clean old current symlink if exists
+  file:
+    path: "{{ app_dir }}/current"
+    state: absent
 
-    # --- Extract artifact ---
-    - name: Extract artifact into release directory
-      ansible.builtin.unarchive:
-        src: "/tmp/{{ artifact_name }}"
-        dest: "{{ app_dir }}/releases/{{ build_id }}"
-        remote_src: yes
-        owner: "{{ flask_user }}"
-        group: "{{ flask_user }}"
-        mode: '0755'
-        extra_opts:
-          - --strip-components=1
+# --- Extract artifact ---
+- name: Extract artifact into release directory
+  ansible.builtin.unarchive:
+    src: "/tmp/{{ artifact_name }}"
+    dest: "{{ app_dir }}/releases/{{ build_id }}"
+    remote_src: yes
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0755'
+    extra_opts:
+      - --strip-components=1
+    # Prevent re-extracting if already done
+    creates: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
 
-    - name: Update current symlink to latest release
-      file:
-        src: "{{ app_dir }}/releases/{{ build_id }}"
-        dest: "{{ app_dir }}/current"
-        state: link
-
-    # --- Virtualenv & dependencies ---
-    - name: Create virtualenv if missing
-      ansible.builtin.command:
-        cmd: python3 -m venv "{{ venv_dir }}"
-      args:
-        creates: "{{ venv_dir }}"
-
-    - name: Install Python dependencies in virtualenv
-      ansible.builtin.pip:
-        requirements: "{{ app_dir }}/current/files/requirements.txt"
-        virtualenv: "{{ venv_dir }}"
-        virtualenv_python: python3
-
-    # --- Restart Flask service ---
-    - name: Restart Flask app service
-      ansible.builtin.systemd:
-        name: flaskapp
-        state: restarted
-        enabled: yes
-        daemon_reload: yes
+# --- Mark extraction done ---
+- name: Touch extracted marker
+  file:
+    path: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
+    state: touch
