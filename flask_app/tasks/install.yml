@@ -15,6 +15,15 @@
   args:
     creates: "{{ venv_dir }}/bin/activate"
 
+- name: Copy requirements.txt to current (before pip)
+  copy:
+    src: requirements.txt
+    dest: "{{ app_dir }}/current/requirements.txt"
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0644'
+
+
 - name: Install Python requirements
   ansible.builtin.pip:
     requirements: "{{ app_dir }}/current/requirements.txt"
