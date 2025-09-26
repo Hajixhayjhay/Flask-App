@@ -1,10 +1,16 @@
-- name: Set build_id if not defined
-  set_fact:
-    build_id: "{{ (build_id | default('latest')) | string }}"
-
-- name: Debug build_id
-  debug:
-    msg: "Deploying build_id={{ build_id }}"
+# --- Ensure base directories exist ---
+- name: Ensure base directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0755'
+  loop:
+    - "{{ app_dir }}"
+    - "{{ app_dir }}/releases"
+    - "{{ app_dir }}/instance"
+    - "/var/log/flaskapp"
 
 # --- Download artifact from S3 ---
 - name: Download artifact from S3
@@ -27,44 +33,19 @@
     msg: "Artifact /tmp/{{ artifact_name }} not found!"
   when: not artifact_stat.stat.exists
 
-# --- Ensure base directories exist ---
-- name: Ensure base directories exist
-  file:
-    path: "{{ item }}"
-    state: directory
-    owner: "{{ flask_user }}"
-    group: "{{ flask_user }}"
-    mode: '0755'
-  loop:
-    - "{{ app_dir }}"
-    - "{{ app_dir }}/releases"
-    - "{{ app_dir }}/instance"
-    - "/var/log/flaskapp"
-
 # --- Prepare release ---
-- name: Clean old release directory if exists
-  file:
-    path: "{{ app_dir }}/releases/{{ build_id }}"
-    state: absent
-
 - name: Ensure release directory exists
   file:
-    path: "{{ app_dir }}/releases/{{ build_id }}"
+    path: "{{ app_dir }}/releases/{{ build_id | default('latest') }}"
     state: directory
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     mode: '0755'
 
-- name: Clean old current symlink if exists
-  file:
-    path: "{{ app_dir }}/current"
-    state: absent
-
-# --- Extract artifact ---
 - name: Extract artifact into release directory
   unarchive:
     src: "/tmp/{{ artifact_name }}"
-    dest: "{{ app_dir }}/releases/{{ build_id }}"
+    dest: "{{ app_dir }}/releases/{{ build_id | default('latest') }}"
     remote_src: yes
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
@@ -72,16 +53,16 @@
     extra_opts:
       - --strip-components=1
   args:
-    creates: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
+    creates: "{{ app_dir }}/releases/{{ build_id | default('latest') }}/.extracted"
 
 - name: Touch extracted marker
   file:
-    path: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
+    path: "{{ app_dir }}/releases/{{ build_id | default('latest') }}/.extracted"
     state: touch
 
 - name: Update current symlink to latest release
   file:
-    src: "{{ app_dir }}/releases/{{ build_id }}"
+    src: "{{ app_dir }}/releases/{{ build_id | default('latest') }}"
     dest: "{{ app_dir }}/current"
     state: link
     force: yes
