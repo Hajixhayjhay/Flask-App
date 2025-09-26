@@ -8,8 +8,8 @@
   debug:
     msg: "Deploying build_id={{ build_id }}"
 
-# --- Ensure base directories and release directory exist ---
-- name: Ensure app and release directories exist
+# --- Ensure base directories exist ---
+- name: Ensure base directories exist
   file:
     path: "{{ item }}"
     state: directory
@@ -21,7 +21,6 @@
     - "{{ app_dir }}/releases"
     - "{{ app_dir }}/instance"
     - "/var/log/flaskapp"
-    - "{{ app_dir }}/releases/{{ build_id }}"   # ensures release folder exists
   become: yes
 
 # --- Remove old current symlink if exists ---
@@ -52,6 +51,17 @@
   fail:
     msg: "Artifact /tmp/{{ artifact_name }} not found!"
   when: not artifact_stat.stat.exists
+  become: yes
+
+# --- Ensure release folder exists right before extraction ---
+- name: Ensure release folder exists for artifact extraction
+  file:
+    path: "{{ app_dir }}/releases/{{ build_id }}"
+    state: directory
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0755'
+  become: yes
 
 # --- Extract artifact ---
 - name: Extract artifact into release directory
