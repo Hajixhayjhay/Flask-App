@@ -14,9 +14,9 @@
     path: "{{ app_dir }}/current"
     state: absent
 
-- name: Recreate current release dir
+- name: Ensure release directory exists
   file:
-    path: "{{ app_dir }}/current"
+    path: "{{ app_dir }}/releases/{{ build_id }}"
     state: directory
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
@@ -24,7 +24,7 @@
 
 - name: Extract artifact into release
   unarchive:
-    src: "/tmp/{{ artifact }}"
+    src: "/tmp/{{ artifact_name }}"
     dest: "{{ app_dir }}/releases/{{ build_id }}"
     remote_src: yes
     owner: "{{ flask_user }}"
@@ -32,6 +32,13 @@
     mode: '0755'
     extra_opts:
       - --strip-components=1
+
+- name: Update current symlink to latest release
+  file:
+    src: "{{ app_dir }}/releases/{{ build_id }}"
+    dest: "{{ app_dir }}/current"
+    state: link
+
 
 - name: Create virtualenv if missing
   ansible.builtin.command:
