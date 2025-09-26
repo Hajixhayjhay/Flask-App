@@ -19,6 +19,9 @@
     object: "{{ artifact_name }}"
     dest: "/tmp/{{ artifact_name }}"
     mode: get
+    region: us-east-1  # or your bucket region
+
+
 
 - name: Extract artifact
   unarchive:
