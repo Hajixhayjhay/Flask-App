@@ -2,10 +2,10 @@ pipeline {
     agent { label 'JenkinsAgent' }
 
     environment {
-        VENV_DIR = 'venv'
+        VENV_DIR = '/opt/flaskapp/venv'       // Matches your Ansible playbook
         ARTIFACT = 'flaskapp.tar.gz'
         S3_BUCKET = 'aj-flaskapp-bucket'
-        SSH_KEY = 'key_file' // your Jenkins SSH credential ID
+        SSH_KEY = 'key_file'                  // Jenkins SSH credential ID
     }
 
     stages {
@@ -15,9 +15,10 @@ pipeline {
             }
         }
 
-        stage('Setup Python') {
+        stage('Setup Python & Install Dependencies') {
             steps {
                 sh """
+                    set -e
                     python3 -m venv ${VENV_DIR}
                     source ${VENV_DIR}/bin/activate
                     pip install --upgrade pip
@@ -27,7 +28,7 @@ pipeline {
             }
         }
 
-        stage('Initialize DB') {
+        stage('Initialize SQLite DB') {
             steps {
                 sh """
                     sqlite3 flask_app/files/data.db < flask_app/files/init_db.sql
@@ -65,7 +66,8 @@ pipeline {
                 sshagent([SSH_KEY]) {
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
                         sh """
-                            ansible-playbook -i my_inventory.aws_ec2.yml flaskapp_deploy.yml --extra-vars "artifact_name=${ARTIFACT} s3_bucket=${S3_BUCKET} build_id=latest"
+                            ansible-playbook -i my_inventory.aws_ec2.yml flaskapp_deploy.yml \
+                            --extra-vars "artifact_name=${ARTIFACT} s3_bucket=${S3_BUCKET} build_id=latest venv_dir=${VENV_DIR}"
                         """
                     }
                 }
