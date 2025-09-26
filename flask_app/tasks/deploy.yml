@@ -1,5 +1,5 @@
-# --- Deploy Flask App ---
-
+---
+# Set build_id if not defined
 - name: Set build_id if not defined
   set_fact:
     build_id: "{{ build_id | default('latest') | string }}"
@@ -8,7 +8,7 @@
   debug:
     msg: "Deploying build_id={{ build_id }}"
 
-# --- Ensure base directories exist ---
+# Ensure base directories exist
 - name: Ensure base directories exist
   file:
     path: "{{ item }}"
@@ -21,9 +21,8 @@
     - "{{ app_dir }}/releases"
     - "{{ app_dir }}/instance"
     - "/var/log/flaskapp"
-  
 
-# --- Prepare release directory ---
+# Ensure release directory exists
 - name: Ensure release directory exists before extraction
   file:
     path: "{{ app_dir }}/releases/{{ build_id }}"
@@ -31,16 +30,14 @@
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     mode: '0755'
-  
 
-# --- Remove old current symlink if exists ---
+# Remove old current symlink if exists
 - name: Remove old current symlink if exists
   file:
     path: "{{ app_dir }}/current"
     state: absent
-  
 
-# --- Download artifact from S3 ---
+# Download artifact from S3
 - name: Download artifact from S3
   amazon.aws.s3_object:
     bucket: "{{ s3_bucket }}"
@@ -50,7 +47,8 @@
     region: "us-east-1"
   vars:
     ansible_python_interpreter: "{{ venv_dir }}/bin/python3"
-  
+
+# Fail if artifact was not downloaded
 - name: Fail if artifact was not downloaded
   stat:
     path: "/tmp/{{ artifact_name }}"
@@ -60,50 +58,41 @@
   fail:
     msg: "Artifact /tmp/{{ artifact_name }} not found!"
   when: not artifact_stat.stat.exists
-  
 
-# --- Extract artifact ---
+# Extract artifact using shell tar command
 - name: Extract artifact into release directory
-  unarchive:
-    src: "/tmp/{{ artifact_name }}"
-    dest: "{{ app_dir }}/releases/{{ build_id }}"
-    remote_src: yes
-    owner: "{{ flask_user }}"
-    group: "{{ flask_user }}"
-    mode: '0755'
-    extra_opts:
-      - --strip-components=1
-  
+  shell: |
+    tar -xzf /tmp/{{ artifact_name }} -C {{ app_dir }}/releases/{{ build_id }} --strip-components=1
+  args:
+    creates: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
+  become: yes
+  become_user: "{{ flask_user }}"
 
-# --- Optional: Touch extracted marker for idempotency ---
+# Touch extracted marker for idempotency
 - name: Touch extracted marker
   file:
     path: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
     state: touch
-  
 
-# --- Update current symlink ---
+# Update current symlink
 - name: Update current symlink to latest release
   file:
     src: "{{ app_dir }}/releases/{{ build_id }}"
     dest: "{{ app_dir }}/current"
     state: link
     force: yes
-  
 
-# --- Install Python dependencies ---
+# Install Python dependencies
 - name: Install Python dependencies in virtualenv
   ansible.builtin.pip:
     requirements: "{{ app_dir }}/current/files/requirements.txt"
     virtualenv: "{{ venv_dir }}"
     virtualenv_python: python3
-  
 
-# --- Restart Flask service ---
+# Restart Flask service
 - name: Restart Flask app service
   ansible.builtin.systemd:
     name: flaskapp
     state: restarted
     enabled: yes
     daemon_reload: yes
-  
