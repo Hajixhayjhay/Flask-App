@@ -97,7 +97,8 @@
     mode: '0644'
   loop:
     - { src: "files/templates/index.html.j2", dest: "files/templates/index.html" }
-
+    
+# --- Copy requirements.txt ---
 - name: Copy requirements.txt
   copy:
     src: files/requirements.txt
