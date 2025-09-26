@@ -57,3 +57,4 @@
     dest: "{{ app_dir }}/current"
     state: link
     force: yes
+#
