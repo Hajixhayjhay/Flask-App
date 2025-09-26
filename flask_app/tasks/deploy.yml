@@ -22,10 +22,10 @@
     group: "{{ flask_user }}"
     mode: '0755'
 
-- name: Extract artifact into current release
+- name: Extract artifact into release
   unarchive:
     src: "/tmp/{{ artifact }}"
-    dest: "{{ app_dir }}/current"
+    dest: "{{ app_dir }}/releases/{{ build_id }}"
     remote_src: yes
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
