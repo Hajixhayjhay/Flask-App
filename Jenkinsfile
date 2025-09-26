@@ -6,16 +6,12 @@ pipeline {
         ARTIFACT = 'flaskapp.tar.gz'
         S3_BUCKET = 'aj-flaskapp-bucket'
         SSH_KEY = 'key_file' // your Jenkins SSH credential ID
-        SONARQUBE_ENV = 'Sonar_url' // your SonarQube installation name
-        SONAR_TOKEN = 'SonarQube'   // your SonarQube PAT credential ID
     }
 
     stages {
         stage('Checkout SCM') {
             steps {
-                git branch: 'dev',
-                    url: 'https://github.com/Hajixhayjhay/Flask-App.git',
-                    credentialsId: "${GIT_CREDENTIALS}"
+                checkout scm
             }
         }
 
