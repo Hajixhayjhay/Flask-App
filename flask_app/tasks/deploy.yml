@@ -1,4 +1,4 @@
-# --- Set build_id if not defined ---
+---
 - name: Set build_id if not defined
   set_fact:
     build_id: "{{ (build_id | default('latest')) | string }}"
@@ -15,6 +15,8 @@
     dest: "/tmp/{{ artifact_name }}"
     mode: get
     region: us-east-1
+  vars:
+    ansible_python_interpreter: "{{ venv_dir }}/bin/python3"
 
 - name: Fail if artifact was not downloaded
   stat:
@@ -40,7 +42,7 @@
     - "{{ app_dir }}/instance"
     - "/var/log/flaskapp"
 
-# --- Ensure release directory exists ---
+# --- Prepare release directory ---
 - name: Ensure release directory exists
   file:
     path: "{{ app_dir }}/releases/{{ build_id }}"
@@ -55,19 +57,23 @@
     path: "{{ app_dir }}/current"
     state: absent
 
-# --- Extract artifact into release directory ---
+# --- Extract artifact ---
 - name: Extract artifact into release directory
   unarchive:
     src: "/tmp/{{ artifact_name }}"
     dest: "{{ app_dir }}/releases/{{ build_id }}/"
     remote_src: yes
-    owner: "{{ flask_user }}"
-    group: "{{ flask_user }}"
-    mode: '0755'
     extra_opts:
       - --strip-components=1
+  args:
+    creates: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
 
-# --- Update current symlink to latest release ---
+- name: Touch extracted marker
+  file:
+    path: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
+    state: touch
+
+# --- Update current symlink ---
 - name: Update current symlink to latest release
   file:
     src: "{{ app_dir }}/releases/{{ build_id }}"
