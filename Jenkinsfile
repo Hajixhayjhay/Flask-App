@@ -4,21 +4,23 @@ pipeline {
     environment {
         VENV_DIR = 'venv'
         ARTIFACT = 'flaskapp.tar.gz'
-        S3_BUCKET = 'aws_s3_bucket'           // Jenkins AWS credential ID for S3
-        SSH_KEY = 'key_file'                   // Jenkins SSH credential ID
-        SONAR_TOKEN = credentials('SonarQube') // SonarQube token
-        SONAR_URL = credentials('Sonar_url')   // SonarQube URL
-        EMAIL_CREDENTIALS = credentials('email-credentials') // Username/password
-        RECIPIENT_EMAIL = credentials('recipient-email')      // Secret text
-        GIT_CREDENTIALS = 'github_credentials'               // Git credentials ID
+        S3_BUCKET = 'aws_s3_bucket'
+        SSH_KEY = 'key_file'
+        SONAR_TOKEN = credentials('SonarQube')
+        SONAR_URL = credentials('Sonar_url')
+        EMAIL_CREDENTIALS = credentials('email-credentials')
+        RECIPIENT_EMAIL = credentials('recipient-email')
     }
 
     stages {
         stage('Checkout SCM') {
             steps {
-                git branch: 'dev',
-                    url: 'https://github.com/Hajixhayjhay/Flask-App.git',
-                    credentialsId: "${GIT_CREDENTIALS}"
+                checkout([$class: 'GitSCM',
+                          branches: [[name: '*/dev']],
+                          doGenerateSubmoduleConfigurations: false,
+                          extensions: [],
+                          userRemoteConfigs: [[url: 'https://github.com/Hajixhayjhay/Flask-App.git',
+                                               credentialsId: 'github_credentials']]])
             }
         }
 
@@ -68,24 +70,12 @@ pipeline {
             }
         }
 
-        stage('Build & Upload Artifact') {
-            steps {
-                sh """
-                    cd flask_app
-                    tar -czf ../${ARTIFACT} *
-                    cd ..
-                    aws s3 cp ${ARTIFACT} s3://${S3_BUCKET}/${ARTIFACT}
-                """
-            }
-        }
-
         stage('Deploy via Ansible') {
             steps {
                 sshagent([SSH_KEY]) {
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
                         sh """
-                            ansible-playbook -i my_inventory.aws_ec2.yml flaskapp_deploy.yml \
-                                --extra-vars "artifact_name=${ARTIFACT} s3_bucket=${S3_BUCKET} build_id=latest"
+                            ansible-playbook -i my_inventory.aws_ec2.yml flaskapp_deploy.yml --extra-vars "artifact_name=${ARTIFACT} s3_bucket=${S3_BUCKET} build_id=latest"
                         """
                     }
                 }
@@ -95,32 +85,23 @@ pipeline {
 
     post {
         always {
-            node {
-                archiveArtifacts artifacts: 'test-reports/*, coverage.xml', allowEmptyArchive: true
-                junit 'test-reports/results.xml'
-                cleanWs()
-            }
+            archiveArtifacts artifacts: 'test-reports/*, coverage.xml', allowEmptyArchive: true
+            junit 'test-reports/results.xml'
         }
         success {
-            node {
-                mail to: "${RECIPIENT_EMAIL}",
-                     from: "${EMAIL_CREDENTIALS_USR}",
-                     subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                     body: "Good news! The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} succeeded."
-            }
+            mail to: "${RECIPIENT_EMAIL}",
+                 from: "${EMAIL_CREDENTIALS_USR}",
+                 subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} succeeded."
         }
         failure {
-            node {
-                mail to: "${RECIPIENT_EMAIL}",
-                     from: "${EMAIL_CREDENTIALS_USR}",
-                     subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                     body: "The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} failed. Please check the logs."
-            }
+            mail to: "${RECIPIENT_EMAIL}",
+                 from: "${EMAIL_CREDENTIALS_USR}",
+                 subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} failed. Check the logs."
         }
         cleanup {
-            node {
-                cleanWs()
-            }
+            cleanWs()
         }
     }
 }
