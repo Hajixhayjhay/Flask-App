@@ -60,15 +60,24 @@ pipeline {
 
         stage('Deploy via Ansible') {
             steps {
-                sshagent([SSH_KEY]) {
-                    sh """
-                        ansible-playbook -i my_inventory.aws_ec2.yml flaskapp_deploy.yml \
-                            --extra-vars "artifact=${ARTIFACT} s3_bucket=${S3_BUCKET}"
-                    """
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                  credentialsId: 'your-aws-cred-id']]) {
+                    sh '''
+                    # Export AWS credentials for Ansible
+                    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+
+                    # Optional: specify AWS region
+                    export AWS_DEFAULT_REGION=us-east-1
+
+                    # Run your Ansible playbook
+                    ansible-playbook -i inventory flask_app_deploy.yml
+                    '''
                 }
             }
         }
     }
+}
 
     post {
         always {
