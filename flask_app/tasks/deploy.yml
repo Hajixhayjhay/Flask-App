@@ -39,13 +39,13 @@
     - "{{ app_dir }}/releases"
     - "{{ app_dir }}/instance"
     - "/var/log/flaskapp"
-  become: yes
+  
 
 - name: Clean old release if exists
   file:
     path: "{{ app_dir }}/releases/{{ build_id }}"
     state: absent
-  become: yes
+
 
 - name: Recreate release directory
   file:
@@ -54,13 +54,13 @@
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     mode: '0755'
-  become: yes
+  
 
 - name: Clean old current symlink if exists
   file:
     path: "{{ app_dir }}/current"
     state: absent
-  become: yes
+  
 
 # --- Extract artifact ---
 - name: Extract artifact into release directory
@@ -73,14 +73,14 @@
     mode: '0755'
     extra_opts:
       - --strip-components=1
-  become: yes
+  
 
 - name: Update current symlink to latest release
   file:
     src: "{{ app_dir }}/releases/{{ build_id }}"
     dest: "{{ app_dir }}/current"
     state: link
-  become: yes
+  
 
 # --- Virtualenv and dependencies ---
 - name: Create virtualenv if missing
@@ -88,14 +88,14 @@
     cmd: python3 -m venv "{{ venv_dir }}"
   args:
     creates: "{{ venv_dir }}"
-  become: yes
+  
 
 - name: Install Python dependencies in virtualenv
   ansible.builtin.pip:
     requirements: "{{ app_dir }}/current/files/requirements.txt"
     virtualenv: "{{ venv_dir }}"
     virtualenv_python: python3
-  become: yes
+  
 
 # --- Restart service ---
 - name: Restart Flask app service
@@ -104,4 +104,4 @@
     state: restarted
     enabled: yes
     daemon_reload: yes
-  become: yes
+  
