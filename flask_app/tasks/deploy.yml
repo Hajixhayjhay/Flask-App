@@ -1,4 +1,14 @@
-# Ensure base directories
+# --- Deploy Flask App ---
+
+- name: Set build_id if not defined
+  set_fact:
+    build_id: "{{ build_id | default('latest') | string }}"
+
+- name: Debug build_id
+  debug:
+    msg: "Deploying build_id={{ build_id }}"
+
+# --- Ensure base directories exist ---
 - name: Ensure base directories exist
   file:
     path: "{{ item }}"
@@ -11,17 +21,26 @@
     - "{{ app_dir }}/releases"
     - "{{ app_dir }}/instance"
     - "/var/log/flaskapp"
+  
 
-# Temporary extraction dir
-- name: Ensure temporary extraction directory exists
+# --- Prepare release directory ---
+- name: Ensure release directory exists before extraction
   file:
-    path: "/tmp/{{ build_id }}"
+    path: "{{ app_dir }}/releases/{{ build_id }}"
     state: directory
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     mode: '0755'
+  
 
-# Download artifact
+# --- Remove old current symlink if exists ---
+- name: Remove old current symlink if exists
+  file:
+    path: "{{ app_dir }}/current"
+    state: absent
+  
+
+# --- Download artifact from S3 ---
 - name: Download artifact from S3
   amazon.aws.s3_object:
     bucket: "{{ s3_bucket }}"
@@ -31,30 +50,60 @@
     region: "us-east-1"
   vars:
     ansible_python_interpreter: "{{ venv_dir }}/bin/python3"
+  
+- name: Fail if artifact was not downloaded
+  stat:
+    path: "/tmp/{{ artifact_name }}"
+  register: artifact_stat
 
-# Extract artifact into temp dir
-- name: Extract artifact into temporary directory
+- name: Ensure artifact exists
+  fail:
+    msg: "Artifact /tmp/{{ artifact_name }} not found!"
+  when: not artifact_stat.stat.exists
+  
+
+# --- Extract artifact ---
+- name: Extract artifact into release directory
   unarchive:
     src: "/tmp/{{ artifact_name }}"
-    dest: "/tmp/{{ build_id }}"
+    dest: "{{ app_dir }}/releases/{{ build_id }}"
     remote_src: yes
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     mode: '0755'
     extra_opts:
       - --strip-components=1
+  
 
-# Move extracted content to releases
-- name: Move extracted content to release directory
-  command: mv "/tmp/{{ build_id }}" "{{ app_dir }}/releases/{{ build_id }}"
-  args:
-    creates: "{{ app_dir }}/releases/{{ build_id }}"
+# --- Optional: Touch extracted marker for idempotency ---
+- name: Touch extracted marker
+  file:
+    path: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
+    state: touch
+  
 
-# Update current symlink
+# --- Update current symlink ---
 - name: Update current symlink to latest release
   file:
     src: "{{ app_dir }}/releases/{{ build_id }}"
     dest: "{{ app_dir }}/current"
     state: link
     force: yes
-#
+  
+
+# --- Install Python dependencies ---
+- name: Install Python dependencies in virtualenv
+  ansible.builtin.pip:
+    requirements: "{{ app_dir }}/current/files/requirements.txt"
+    virtualenv: "{{ venv_dir }}"
+    virtualenv_python: python3
+  
+
+# --- Restart Flask service ---
+- name: Restart Flask app service
+  ansible.builtin.systemd:
+    name: flaskapp
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+  
