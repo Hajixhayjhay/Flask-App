@@ -6,16 +6,12 @@ pipeline {
         ARTIFACT = 'flaskapp.tar.gz'
         S3_BUCKET = 'aj-flaskapp-bucket'
         SSH_KEY = 'key_file' // your Jenkins SSH credential ID
-        SONAR_TOKEN = credentials('SonarQube')      // token
-        SONAR_HOST_URL = credentials('Sonar_url')   // Sonar IP/URL
     }
 
     stages {
         stage('Checkout SCM') {
             steps {
-                git branch: 'dev',
-                    url: 'https://github.com/Hajixhayjhay/Flask-App.git',
-                    credentialsId: 'github_credentials'
+                checkout scm
             }
         }
 
@@ -26,7 +22,7 @@ pipeline {
                     source ${VENV_DIR}/bin/activate
                     pip install --upgrade pip
                     pip install -r flask_app/files/requirements.txt
-                    pip install pytest pytest-cov sonar-scanner
+                    pip install pytest pytest-cov
                 """
             }
         }
@@ -55,14 +51,9 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                sh """
-                    source ${VENV_DIR}/bin/activate
-                    sonar-scanner \
-                        -Dsonar.projectKey=FlaskApp \
-                        -Dsonar.sources=flask_app \
-                        -Dsonar.host.url=${SONAR_HOST_URL} \
-                        -Dsonar.login=${SONAR_TOKEN}
-                """
+                withSonarQubeEnv('Sonar_url') {
+                    sh "sonar-scanner -Dsonar.projectKey=FlaskApp -Dsonar.sources=flask_app"
+                }
             }
         }
 
