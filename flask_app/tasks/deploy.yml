@@ -1,3 +1,8 @@
+# --- Debug build_id ---
+- name: Show build_id
+  debug:
+    msg: "Deploying build_id={{ build_id }}"
+
 # --- Ensure base directories exist ---
 - name: Ensure base directories exist
   file:
@@ -14,7 +19,7 @@
 
 # --- Download artifact from S3 ---
 - name: Download artifact from S3
-  amazon.aws.s3:
+  amazon.aws.s3_object:
     bucket: "{{ s3_bucket }}"
     object: "{{ artifact_name }}"
     dest: "/tmp/{{ artifact_name }}"
@@ -34,18 +39,29 @@
   when: not artifact_stat.stat.exists
 
 # --- Prepare release ---
+- name: Clean old release directory if exists
+  file:
+    path: "{{ app_dir }}/releases/{{ build_id }}"
+    state: absent
+
 - name: Ensure release directory exists
   file:
-    path: "{{ app_dir }}/releases/{{ build_id | default('latest') }}"
+    path: "{{ app_dir }}/releases/{{ build_id }}"
     state: directory
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     mode: '0755'
 
+- name: Clean old current symlink if exists
+  file:
+    path: "{{ app_dir }}/current"
+    state: absent
+
+# --- Extract artifact ---
 - name: Extract artifact into release directory
   unarchive:
     src: "/tmp/{{ artifact_name }}"
-    dest: "{{ app_dir }}/releases/{{ build_id | default('latest') }}"
+    dest: "{{ app_dir }}/releases/{{ build_id }}"
     remote_src: yes
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
@@ -53,31 +69,14 @@
     extra_opts:
       - --strip-components=1
   args:
-    creates: "{{ app_dir }}/releases/{{ build_id | default('latest') }}/.extracted"
+    creates: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
 
 - name: Touch extracted marker
   file:
-    path: "{{ app_dir }}/releases/{{ build_id | default('latest') }}/.extracted"
+    path: "{{ app_dir }}/releases/{{ build_id }}/.extracted"
     state: touch
 
+# --- Update symlink ---
 - name: Update current symlink to latest release
   file:
-    src: "{{ app_dir }}/releases/{{ build_id | default('latest') }}"
-    dest: "{{ app_dir }}/current"
-    state: link
-    force: yes
-
-# --- Install Python dependencies ---
-- name: Install Python dependencies in virtualenv
-  ansible.builtin.pip:
-    requirements: "{{ app_dir }}/current/files/requirements.txt"
-    virtualenv: "{{ venv_dir }}"
-    virtualenv_python: python3
-
-# --- Restart Flask service ---
-- name: Restart Flask app service
-  ansible.builtin.systemd:
-    name: flaskapp
-    state: restarted
-    enabled: yes
-    daemon_reload: yes
+    src: "{{ app_dir }}/releases/{{_
