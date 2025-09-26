@@ -1,4 +1,4 @@
-flask_user: flaskuser
+flask_user: ec2-user
 app_dir: /opt/flaskapp
 venv_dir: /opt/flaskapp/venv
 flask_port: 5000
