@@ -4,8 +4,12 @@ pipeline {
     environment {
         VENV_DIR = 'venv'
         ARTIFACT = 'flaskapp.tar.gz'
-        S3_BUCKET = 'aj-flaskapp-bucket'
-        SSH_KEY = 'key_file' // your Jenkins SSH credential ID
+        S3_BUCKET = 'aws_s3_bucket'           // Your Jenkins AWS credential ID for S3
+        SSH_KEY = 'key_file'                   // Jenkins SSH credential ID
+        SONAR_TOKEN = credentials('SonarQube') // SonarQube token
+        SONAR_URL = credentials('Sonar_url')  // SonarQube URL
+        EMAIL_CREDENTIALS = credentials('email-credentials')
+        RECIPIENT_EMAIL = credentials('recipient-email')
     }
 
     stages {
@@ -23,6 +27,7 @@ pipeline {
                     pip install --upgrade pip
                     pip install -r flask_app/files/requirements.txt
                     pip install pytest pytest-cov
+                    pip install sonar-scanner
                 """
             }
         }
@@ -45,6 +50,20 @@ pipeline {
                         --cov=flask_app \
                         --cov-report xml:coverage.xml \
                         --cov-report term-missing
+                """
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                sh """
+                    source ${VENV_DIR}/bin/activate
+                    sonar-scanner \
+                        -Dsonar.projectKey=FlaskApp \
+                        -Dsonar.sources=flask_app \
+                        -Dsonar.host.url=${SONAR_URL} \
+                        -Dsonar.login=${SONAR_TOKEN} \
+                        -Dsonar.python.coverage.reportPaths=coverage.xml
                 """
             }
         }
@@ -77,6 +96,20 @@ pipeline {
         always {
             archiveArtifacts artifacts: 'test-reports/*, coverage.xml', allowEmptyArchive: true
             junit 'test-reports/results.xml'
+        }
+        success {
+            mail to: "${RECIPIENT_EMAIL}",
+                 from: "${EMAIL_CREDENTIALS_USR}",
+                 subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Good news! The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} succeeded."
+        }
+        failure {
+            mail to: "${RECIPIENT_EMAIL}",
+                 from: "${EMAIL_CREDENTIALS_USR}",
+                 subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} failed. Please check the logs."
+        }
+        cleanup {
             cleanWs()
         }
     }
