@@ -1,6 +1,6 @@
 - name: Set build_id if not defined
   set_fact:
-    build_id: "{{ build_id | default('latest') }}"
+    build_id: "{{ (build_id | default('latest')) | string }}"
 
 - name: Debug build_id
   debug:
