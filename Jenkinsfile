@@ -2,15 +2,10 @@ pipeline {
     agent { label 'JenkinsAgent' }
 
     environment {
-        VENV_DIR = 'venv'
-        ARTIFACT = 'flaskapp.tar.gz'
-        S3_BUCKET = 'aws_s3_bucket'           // Jenkins AWS credential ID for S3
-        SSH_KEY = 'key_file'                   // Jenkins SSH credential ID
-        SONAR_TOKEN = credentials('SonarQube') // SonarQube token
-        SONAR_URL = credentials('Sonar_url')   // SonarQube URL
-        EMAIL_CREDENTIALS = credentials('email-credentials')
-        RECIPIENT_EMAIL = credentials('recipient-email')
         GIT_CREDENTIALS = 'github_credentials'
+        SONAR_CREDENTIALS = 'sonar_credentials'
+        SONAR_PROJECT_KEY = 'FlaskApp'
+        SONAR_HOST_URL = 'http://your-sonarqube-server:9000'
     }
 
     stages {
@@ -22,74 +17,36 @@ pipeline {
             }
         }
 
-        stage('Setup Python') {
+        stage('Install Dependencies') {
             steps {
-                sh """
-                    python3 -m venv ${VENV_DIR}
-                    source ${VENV_DIR}/bin/activate
-                    pip install --upgrade pip
-                    pip install -r flask_app/files/requirements.txt
-                    pip install pytest pytest-cov
-                    pip install sonar-scanner
-                """
+                sh '''
+                python3 -m venv venv
+                source venv/bin/activate
+                pip install -r requirements.txt
+                '''
             }
         }
 
-        stage('Initialize DB') {
+        stage('Run Tests') {
             steps {
-                sh """
-                    sqlite3 flask_app/files/data.db < flask_app/files/init_db.sql
-                """
-            }
-        }
-
-        stage('Run Tests with Coverage') {
-            steps {
-                sh """
-                    source ${VENV_DIR}/bin/activate
-                    mkdir -p test-reports
-                    pytest flask_app/tests \
-                        --junitxml=test-reports/results.xml \
-                        --cov=flask_app \
-                        --cov-report xml:coverage.xml \
-                        --cov-report term-missing
-                """
+                sh '''
+                source venv/bin/activate
+                pytest --junitxml=test-reports/results.xml --cov=flask_app --cov-report xml:coverage.xml
+                '''
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                sh """
-                    source ${VENV_DIR}/bin/activate
+                withCredentials([string(credentialsId: SONAR_CREDENTIALS, variable: 'SONAR_TOKEN')]) {
+                    sh '''
+                    source venv/bin/activate
                     sonar-scanner \
-                        -Dsonar.projectKey=FlaskApp \
-                        -Dsonar.sources=flask_app \
-                        -Dsonar.host.url=${SONAR_URL} \
-                        -Dsonar.login=${SONAR_TOKEN} \
-                        -Dsonar.python.coverage.reportPaths=coverage.xml
-                """
-            }
-        }
-
-        stage('Build & Upload Artifact') {
-            steps {
-                sh """
-                    cd flask_app
-                    tar -czf ../${ARTIFACT} *
-                    cd ..
-                    aws s3 cp ${ARTIFACT} s3://${S3_BUCKET}/${ARTIFACT}
-                """
-            }
-        }
-
-        stage('Deploy via Ansible') {
-            steps {
-                sshagent([SSH_KEY]) {
-                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws_credentials']]) {
-                        sh """
-                            ansible-playbook -i my_inventory.aws_ec2.yml flaskapp_deploy.yml --extra-vars "artifact_name=${ARTIFACT} s3_bucket=${S3_BUCKET} build_id=latest"
-                        """
-                    }
+                      -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                      -Dsonar.sources=. \
+                      -Dsonar.host.url=${SONAR_HOST_URL} \
+                      -Dsonar.login=${SONAR_TOKEN}
+                    '''
                 }
             }
         }
@@ -97,23 +54,10 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'test-reports/*, coverage.xml', allowEmptyArchive: true
-            junit 'test-reports/results.xml'
-        }
-        success {
-            mail to: "${RECIPIENT_EMAIL}",
-                 from: "${EMAIL_CREDENTIALS_USR}",
-                 subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                 body: "Good news! The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} succeeded."
-        }
-        failure {
-            mail to: "${RECIPIENT_EMAIL}",
-                 from: "${EMAIL_CREDENTIALS_USR}",
-                 subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                 body: "The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} failed. Please check the logs."
-        }
-        cleanup {
-            cleanWs()
+            node {
+                archiveArtifacts artifacts: 'test-reports/*, coverage.xml', allowEmptyArchive: true
+                cleanWs()
+            }
         }
     }
 }
