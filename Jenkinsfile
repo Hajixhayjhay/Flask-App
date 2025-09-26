@@ -4,26 +4,21 @@ pipeline {
     environment {
         VENV_DIR = 'venv'
         ARTIFACT = 'flaskapp.tar.gz'
-        S3_BUCKET = 'aws_s3_bucket'
-        SSH_KEY = 'key_file'
-        SONAR_TOKEN = credentials('SonarQube')
-        SONAR_URL = credentials('Sonar_url')
-        GIT_CREDENTIALS = 'github_credentials'
-        EMAIL_CREDENTIALS = credentials('email-credentials')
-        RECIPIENT_EMAIL = credentials('recipient-email')
+        S3_BUCKET = 'aws_s3_bucket'           // Jenkins AWS credential ID for S3
+        SSH_KEY = 'key_file'                   // Jenkins SSH credential ID
+        SONAR_TOKEN = credentials('SonarQube') // SonarQube token
+        SONAR_URL = credentials('Sonar_url')   // SonarQube URL
+        EMAIL_CREDENTIALS = credentials('email-credentials') // Username/password
+        RECIPIENT_EMAIL = credentials('recipient-email')      // Secret text
+        GIT_CREDENTIALS = 'github_credentials'               // Git credentials ID
     }
 
     stages {
         stage('Checkout SCM') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/dev']],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/Hajixhayjhay/Flask-App.git',
-                        credentialsId: "${GIT_CREDENTIALS}"
-                    ]]
-                ])
+                git branch: 'dev',
+                    url: 'https://github.com/Hajixhayjhay/Flask-App.git',
+                    credentialsId: "${GIT_CREDENTIALS}"
             }
         }
 
@@ -100,21 +95,32 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'test-reports/*, coverage.xml', allowEmptyArchive: true
-            junit 'test-reports/results.xml'
-            cleanWs()
+            node {
+                archiveArtifacts artifacts: 'test-reports/*, coverage.xml', allowEmptyArchive: true
+                junit 'test-reports/results.xml'
+                cleanWs()
+            }
         }
         success {
-            mail to: "${RECIPIENT_EMAIL}",
-                 from: "${EMAIL_CREDENTIALS}",
-                 subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                 body: "Good news! The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} succeeded."
+            node {
+                mail to: "${RECIPIENT_EMAIL}",
+                     from: "${EMAIL_CREDENTIALS_USR}",
+                     subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                     body: "Good news! The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} succeeded."
+            }
         }
         failure {
-            mail to: "${RECIPIENT_EMAIL}",
-                 from: "${EMAIL_CREDENTIALS}",
-                 subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                 body: "The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} failed. Please check the logs."
+            node {
+                mail to: "${RECIPIENT_EMAIL}",
+                     from: "${EMAIL_CREDENTIALS_USR}",
+                     subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                     body: "The Jenkins pipeline for ${env.JOB_NAME} build #${env.BUILD_NUMBER} failed. Please check the logs."
+            }
+        }
+        cleanup {
+            node {
+                cleanWs()
+            }
         }
     }
 }
