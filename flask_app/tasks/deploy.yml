@@ -23,14 +23,16 @@
     - "/var/log/flaskapp"
   become: yes
 
-# --- Ensure release directory exists ---
-- name: Ensure release directory exists
+# --- Ensure release directory exists (loop guarantees existence) ---
+- name: Ensure release directories exist
   file:
-    path: "{{ app_dir }}/releases/{{ build_id }}"
+    path: "{{ app_dir }}/releases/{{ item }}"
     state: directory
     owner: "{{ flask_user }}"
     group: "{{ flask_user }}"
     mode: '0755'
+  loop:
+    - "{{ build_id }}"
   become: yes
 
 # --- Remove old current symlink if exists ---
@@ -62,12 +64,15 @@
     msg: "Artifact /tmp/{{ artifact_name }} not found!"
   when: not artifact_stat.stat.exists
 
-# --- Extract artifact ---
+# --- Extract artifact into release directory ---
 - name: Extract artifact into release directory
   unarchive:
     src: "/tmp/{{ artifact_name }}"
     dest: "{{ app_dir }}/releases/{{ build_id }}"
     remote_src: yes
+    owner: "{{ flask_user }}"
+    group: "{{ flask_user }}"
+    mode: '0755'
     extra_opts:
       - --strip-components=1
   become: yes
