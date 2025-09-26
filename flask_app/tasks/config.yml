@@ -15,13 +15,13 @@
 # ---------- Artifact download (if using S3) ----------
 - name: Download artifact from S3
   amazon.aws.s3_object:
-    bucket: "{{ s3_bucket }}"
-    object: "{{ artifact }}"
-    dest: "/opt/flaskapp/releases/{{ artifact }}"
+    bucket: "{{ s3_bucket }}"        # your bucket name
+    object: "{{ artifact }}"         # artifact filename
+    dest: "/opt/flaskapp/releases/{{ artifact }}"  # destination path
     mode: get
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ lookup('env','AWS_ACCESS_KEY_ID') }}"
-    AWS_SECRET_ACCESS_KEY: "{{ lookup('env','AWS_SECRET_ACCESS_KEY') }}"
+    region: "us-east-1"        # replace with your region
+  register: s3_download
+
 
 
 
